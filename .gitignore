@@ -1,3 +1,10 @@
+
+# Jupyter sandbox
+Sandbox*.ipynb
+
+# macOS metadata
+.DS_Store
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
