@@ -11,7 +11,9 @@ __author__ = "Jérémie Lumbroso <lumbroso@cs.princeton.edu>"
 
 __all__ = [
     "SLACK_TOKEN",
-    "login"
+    "login",
+    "scim",
+    "api",
 ]
 
 
@@ -62,6 +64,18 @@ def login(token: typing.Optional[str] = None, silent_error=False):
 
 # try to login
 login(token=SLACK_TOKEN, silent_error=True)
+
+
+def scim(token=None) -> slack_scim.SCIMClient:
+    if _slack_scim is None:
+        login(token=token or SLACK_TOKEN, silent_error=False)
+    return _slack_scim
+
+
+def api(token=None) -> slack.WebClient:
+    if _slack_client is None:
+        login(token=token or SLACK_TOKEN, silent_error=False)
+    return _slack_client
 
 
 def find_group_by_display_name(display_name: str) -> slack_scim.Group:
