@@ -21,7 +21,6 @@ __all__ = [
 ]
 
 
-
 def _escape_filter_param(s):
     if s is None:
         return ""
@@ -202,5 +201,12 @@ class SlackUser:
         return self._user.active
 
 
-def to_slack_user(value: typing.Union[str, slack_scim.User, None]) -> SlackUser:
+SlackUserTypes = typing.Union[str, slack_scim.User, SlackUser]
+
+
+def to_slack_user(value: typing.Optional[SlackUserTypes]) -> typing.Optional[SlackUser]:
+    if isinstance(value, SlackUser):
+        return value
+
     return SlackUser.from_any(value=value)
+
