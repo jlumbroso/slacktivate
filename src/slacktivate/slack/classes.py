@@ -105,8 +105,8 @@ class SlackUser:
             email: typing.Optional[str] = None,
             user: typing.Optional[slack_scim.User] = None,
     ):
-        _provided_username = username
-        _provided_email = email
+        self._provided_username = username
+        self._provided_email = email
 
         if user_id is not None:
             self._user = lookup_user_by_id(user_id=user_id)
