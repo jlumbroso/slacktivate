@@ -2,9 +2,9 @@
 import os
 import typing
 
-import slack_scim
 import slack
 import slack.errors
+import slack_scim
 
 
 __author__ = "Jérémie Lumbroso <lumbroso@cs.princeton.edu>"
