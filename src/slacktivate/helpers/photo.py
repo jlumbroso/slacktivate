@@ -229,7 +229,7 @@ def is_image_likely_identical(img1, img2):
     except:
         return False
 
-    return _is_image_empty(img_comb, threshold=35, proportion=70.0)
+    return _is_image_empty(img_comb, threshold=15, proportion=70.0)
 
 
 # noinspection PyBroadException
