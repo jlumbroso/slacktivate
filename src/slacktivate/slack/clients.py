@@ -58,8 +58,8 @@ def login(token: typing.Optional[str] = None, silent_error=False):
             "The `SLACK_TOKEN` variable is unset, and no `token` was provided. "
             "Cannot initialize Slack API clients.")
 
-    _slack_client = slack.WebClient(token=SLACK_TOKEN)
-    _slack_scim = slack_scim.SCIMClient(token=SLACK_TOKEN)
+    _slack_client = slack.WebClient(token=token)
+    _slack_scim = slack_scim.SCIMClient(token=token)
 
 
 # try to login
