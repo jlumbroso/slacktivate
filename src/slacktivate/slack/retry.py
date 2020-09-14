@@ -69,7 +69,7 @@ def scim_api_give_up_or_retry(err: slack_scim.SCIMApiError) -> bool:
 
 
 def slack_give_up_or_retry(
-        err: typing.Union[slack.errors.SlackApiError, slack_scim.SCIMApiError]
+        err: typing.Union[slack.errors.SlackApiError, slack_scim.SCIMApiError, Exception]
 ) -> bool:
 
     if isinstance(err, slack.errors.SlackApiError):

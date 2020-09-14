@@ -6,6 +6,8 @@ import slack
 import slack.errors
 import slack_scim
 
+import slacktivate.slack.exceptions
+
 
 __author__ = "Jérémie Lumbroso <lumbroso@cs.princeton.edu>"
 
@@ -14,6 +16,8 @@ __all__ = [
     "login",
     "scim",
     "api",
+    "managed_scim",
+    "managed_api",
 ]
 
 
@@ -46,7 +50,11 @@ _slack_client: typing.Optional[slack.WebClient] = None
 _slack_scim: typing.Optional[slack_scim.SCIMClient] = None
 
 
-def login(token: typing.Optional[str] = None, silent_error=False):
+def login(
+        token: typing.Optional[str] = None,
+        silent_error: bool = False,
+        update_global: bool = True,
+) -> typing.Tuple[slack.WebClient, slack_scim.SCIMClient]:
 
     global _slack_client, _slack_scim
 
@@ -58,24 +66,39 @@ def login(token: typing.Optional[str] = None, silent_error=False):
             "The `SLACK_TOKEN` variable is unset, and no `token` was provided. "
             "Cannot initialize Slack API clients.")
 
-    _slack_client = slack.WebClient(token=token)
-    _slack_scim = slack_scim.SCIMClient(token=token)
+    client_obj = slack.WebClient(token=token)
+    scim_obj = slack_scim.SCIMClient(token=token)
+
+    # update global
+    if update_global:
+        _slack_client = client_obj
+        _slack_scim = scim_obj
+
+    return client_obj, scim_obj
 
 
 # try to login
-login(token=SLACK_TOKEN, silent_error=True)
+login(token=SLACK_TOKEN, silent_error=True, update_global=True)
 
 
-def scim(token=None) -> slack_scim.SCIMClient:
-    if _slack_scim is None:
+def scim(token=None, force_login: bool = False) -> slack_scim.SCIMClient:
+    if _slack_scim is None or force_login:
         login(token=token or SLACK_TOKEN, silent_error=False)
     return _slack_scim
 
 
-def api(token=None) -> slack.WebClient:
-    if _slack_client is None:
+def api(token=None, force_login: bool = False) -> slack.WebClient:
+    if _slack_client is None or force_login:
         login(token=token or SLACK_TOKEN, silent_error=False)
     return _slack_client
+
+
+def managed_scim(token=None) -> typing.ContextManager[slack_scim.SCIMClient]:
+    return slacktivate.slack.exceptions.SlackExceptionHandler(client=scim(token=token))
+
+
+def managed_api(token=None) -> typing.ContextManager[slack.WebClient]:
+    return slacktivate.slack.exceptions.SlackExceptionHandler(client=api(token=token))
 
 
 def find_group_by_display_name(display_name: str) -> slack_scim.Group:
