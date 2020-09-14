@@ -1,8 +1,33 @@
 [tool.poetry]
 name = "slacktivate"
-version = "0.1.0"
-description = ""
+version = "0.2.0"
+description = """
+Slacktivate is a Python library and Command-Line Interface to assist in the provisioning of a Slack workspace,
+using both the Slack API and the Slack SCIM API.
+"""
 authors = ["Jérémie Lumbroso <lumbroso@cs.princeton.edu>"]
+license = "LGPL-3.0-or-later"
+readme = "README.md"
+homepage = "https://github.com/jlumbroso/slacktivate"
+repository = "https://github.com/jlumbroso/slacktivate"
+include = [
+    "README.md",
+]
+keywords = [
+    "Slack",
+    "user provisioning",
+    "Slack API",
+    "Slack SCIM API",
+    "Slack configuration",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Office/Business",
+]
 
 [tool.poetry.dependencies]
 python = "^3.8"
