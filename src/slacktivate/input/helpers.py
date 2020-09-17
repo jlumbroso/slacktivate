@@ -111,15 +111,18 @@ def render_jinja2(
         )
 
 
+def unindex_data(data: typing.Union[list, dict]) -> list:
+    if issubclass(type(data), dict) or issubclass(type(data), collections.UserDict):
+        data = list(data.values())
+
+    return data
+
+
 def reindex_user_data(
         user_data: typing.Union[list, dict],
         key: typing.Optional[str] = None,
         unmodify_default: bool = True
 ) -> dict:
-
-    # if a dict, then unindex first
-    if issubclass(type(user_data), dict) or issubclass(type(user_data), collections.UserDict):
-        user_data = list(user_data.values())
 
     key_pattern = key
 
@@ -154,7 +157,7 @@ def reindex_user_data(
 
     reindexed_user_data = {
         pick_key(record): record
-        for record in user_data
+        for record in unindex_data(data=user_data)
     }
 
     # if None is a key, then return original data
@@ -171,9 +174,7 @@ def refilter_user_data(
         key: typing.Optional[str] = None,
 ) -> typing.Union[list, dict]:
 
-    # if a dict, then unindex first
-    if issubclass(type(user_data), dict) or issubclass(type(user_data), collections.UserDict):
-        user_data = list(user_data.values())
+    user_data = unindex_data(data=user_data)
 
     engine = yaql.factory.YaqlFactory().create()
     expression = engine(filter_query)

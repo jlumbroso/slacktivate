@@ -1,5 +1,6 @@
 
 import collections
+import copy
 import io
 import json
 import os
@@ -209,6 +210,44 @@ class UserGroupConfig(SlacktivateConfigSection):
         if "filter" in self:
             assert slacktivate.input.helpers.parseable_yaql(self.get("filter", "")), "check filter is parseable"
 
+    def compute(
+            self,
+            users: typing.Union[list, dict]
+    ) -> typing.List["UserGroupConfig"]:
+
+        users = slacktivate.input.helpers.refilter_user_data(
+            user_data=users,
+            filter_query=self.get("filter"),
+            reindex=False,
+        )
+
+        subgroup_users = {}
+
+        for user in slacktivate.input.helpers.unindex_data(users):
+
+            group_name = slacktivate.input.helpers.render_jinja2(
+                jinja2_pattern=self.get("name"),
+                data=user,
+            )
+
+            subgroup_users[group_name] = subgroup_users.get(group_name, list())
+            subgroup_users[group_name].append(user)
+
+        groups = []
+
+        for subgroup_name, subgroup_membership in subgroup_users.items():
+
+            group = copy.deepcopy(self)
+
+            group.update({
+                "name": subgroup_name,
+                "users": subgroup_membership,
+            })
+
+            groups.append(group)
+
+        return groups
+
 
 class ChannelConfig(SlacktivateConfigSection):
     # {
@@ -277,9 +316,6 @@ def _load_specifications(
 
     if "users" in obj:
         obj["users"] = list(map(UserSourceConfig, obj["users"]))
-
-        # merge into one big dict
-        # TODO
 
     if "groups" in obj:
         obj["groups"] = list(map(UserGroupConfig, obj["groups"]))
