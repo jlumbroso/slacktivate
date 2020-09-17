@@ -1,10 +1,72 @@
 
+import collections
 import typing
 
 import jinja2
+import yaql
+import yaql.language.exceptions
 
 
-def find_jinja2_template_fields(jinja2_pattern: str) -> typing.List[str]:
+__author__ = "Jérémie Lumbroso <lumbroso@cs.princeton.edu>"
+
+__all__ = [
+    "flatten",
+    "parseable_yaql",
+    "parseable_jinja2",
+    "find_jinja2_template_fields",
+]
+
+
+def flatten(
+        lst: typing.Iterable,
+        as_generator: bool = False
+) -> typing.Union[typing.Generator, typing.List]:
+
+    # from: https://stackoverflow.com/a/2158532/408734
+    def _flatten_aux(lst: typing.Iterable):
+        for x in lst:
+            if (
+                    isinstance(x, collections.abc.Iterable) and
+                    not isinstance(x, (str, bytes))
+            ):
+                yield from _flatten_aux(x)
+            else:
+                yield x
+
+    gen = _flatten_aux(lst=lst)
+
+    if as_generator:
+        return gen
+
+    return list(gen)
+
+
+def parseable_jinja2(s: str) -> bool:
+    try:
+        jinja2.Template(s).render()
+    except jinja2.TemplateSyntaxError:
+        return False
+
+    return True
+
+
+def parseable_yaql(s: str) -> bool:
+    try:
+        engine = yaql.factory.YaqlFactory().create()
+        engine(s)
+    except yaql.language.exceptions.YaqlGrammarException:
+        return False
+    except yaql.language.exceptions.YaqlLexicalException:
+        return False
+    except yaql.language.exceptions.YaqlParsingException:
+        return False
+
+    return True
+
+
+def find_jinja2_template_fields(
+        jinja2_pattern: str
+) -> typing.List[str]:
     fields = []
 
     # environment where missing fields raise exception

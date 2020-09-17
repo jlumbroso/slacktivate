@@ -7,29 +7,7 @@ import typing
 
 import yaml
 
-
-def _flatten(
-        lst: typing.Iterable,
-        as_generator: bool = False
-) -> typing.Union[typing.Generator, typing.List]:
-
-    # from: https://stackoverflow.com/a/2158532/408734
-    def _flatten_aux(lst: typing.Iterable):
-        for x in lst:
-            if (
-                    isinstance(x, collections.abc.Iterable) and
-                    not isinstance(x, (str, bytes))
-            ):
-                yield from _flatten_aux(x)
-            else:
-                yield x
-
-    gen = _flatten_aux(lst=lst)
-
-    if as_generator:
-        return gen
-
-    return list(gen)
+import slacktivate.input.helpers
 
 
 class SlacktivateJSONEncoder(json.JSONEncoder):
@@ -112,45 +90,63 @@ class UserSourceConfig(SlacktivateConfigSection):
     #     "file": "filename.json",
     #     "type": "json",
     #     "contents": "...",
-    #     "substitutions": { "a": "A" },
+    #     "key": "{{ email }}",
     #     "fields": { "source": "file:student.json" },
     # }
 
     _required = ["type", ["file", "contents"]]
-    _optional = ["substitutions", "fields"]
+    _optional = ["fields", "key"]
 
     def __init__(self, value):
         super().__init__(value)
 
+        if "file" in self:
+            assert os.path.exists(self.get("file")), "check user config exists"
+
+        if "key" in self:
+            assert slacktivate.input.helpers.parseable_jinja2(self.get("key")), "check 'key' field"
 
 
 
 class UserGroupConfig(SlacktivateConfigSection):
     # {
-    #     "group_by": ["year"],
-    #     "name": "phd-{year}",
+    #     "name": "phd-{{ year }}",
     #     "filter": "$ where $.profile.degree == 'Ph.D.'",
     # }
 
-    _required = ["name", "filter"]
-    _optional = ["group_by"]
-
-    pass
-
-
-class ChannelConfig(SlacktivateConfigSection):
-    # {
-    #     "name": "phd-{year}",
-    #     "groups": ["phd-*"],
-    #     "private": true,
-    # }
-
     _required = ["name"]
-    _optional = ["groups", "private"]
+    _optional = ["filter"]
 
     def __init__(self, value):
         super().__init__(value)
 
+        if "name" in self:
+            assert slacktivate.input.helpers.parseable_jinja2(self.get("name")), "check 'name' field"
+
+        if "filter" in self:
+            assert slacktivate.input.helpers.parseable_yaql(self.get("filter", "")), "check filter is parseable"
+
+
+class ChannelConfig(SlacktivateConfigSection):
+    # {
+    #     "name": "phd-{{ year }}",
+    #     "groups": ["phd-*"],
+    #     "filter": "$ where $.profile.degree == 'Ph.D.'",
+    #     "private": true,
+    #     "permissions": "user",
+    # }
+
+    _required = ["name"]
+    _optional = ["groups", "private", "filter", "permissions"]
+
+    def __init__(self, value):
+        super().__init__(value)
+
+        if "name" in self:
+            assert slacktivate.input.helpers.parseable_jinja2(self.get("name")), "check 'name' field"
+
+        if "filter" in self:
+            assert slacktivate.input.helpers.parseable_yaql(self.get("filter", "")), "check filter is parseable"
 
 
 def _raw_load_specification(
@@ -179,6 +175,30 @@ def _raw_load_specification(
             "stream, filename, contents all `None`"
         )
 
-    d = yaml.load(io.StringIO(contents))
+    obj = yaml.load(io.StringIO(contents), Loader=yaml.BaseLoader)
 
-    return d
+    return obj
+
+
+def _load_specifications(
+        stream: typing.Optional[io.TextIOBase] = None,
+        filename: typing.Optional[str] = None,
+        contents: typing.Optional[str] = None,
+) -> typing.Optional[dict]:
+
+    obj = _raw_load_specification(
+        stream=stream,
+        filename=filename,
+        contents=contents,
+    )
+
+    if "users" in obj:
+        obj["users"] = list(map(UserSourceConfig, obj["users"]))
+
+    if "groups" in obj:
+        obj["groups"] = list(map(UserGroupConfig, obj["groups"]))
+
+    if "channels" in obj:
+        obj["channels"] = list(map(ChannelConfig, obj["channels"]))
+
+    return obj
