@@ -114,6 +114,7 @@ def render_jinja2(
 def reindex_user_data(
         user_data: typing.Union[list, dict],
         key: typing.Optional[str] = None,
+        unmodify_default: bool = True
 ) -> dict:
 
     # if a dict, then unindex first
@@ -140,6 +141,9 @@ def reindex_user_data(
         if issubclass(type(record), list) or issubclass(type(record), collections.UserList):
             return "{{ data[0] }}"
 
+        if unmodify_default:
+            return  # default to None
+
         return "{{ data }}"
 
     def pick_key(record):
@@ -148,10 +152,41 @@ def reindex_user_data(
             data=record,
         )
 
-    user_data = {
+    reindexed_user_data = {
         pick_key(record): record
         for record in user_data
     }
 
+    # if None is a key, then return original data
+    if None not in reindexed_user_data:
+        return reindexed_user_data
+
     return user_data
+
+
+def refilter_user_data(
+        user_data: typing.Union[list, dict],
+        filter_query: typing.Optional[str] = None,
+        reindex: bool = True,
+        key: typing.Optional[str] = None,
+) -> typing.Union[list, dict]:
+
+    # if a dict, then unindex first
+    if issubclass(type(user_data), dict) or issubclass(type(user_data), collections.UserDict):
+        user_data = list(user_data.values())
+
+    engine = yaql.factory.YaqlFactory().create()
+    expression = engine(filter_query)
+    filtered_user_data = expression.evaluate(data=user_data)
+
+    if reindex:
+        filtered_user_data = reindex_user_data(
+            user_data=filtered_user_data,
+            key=key,
+            unmodify_default=True,
+        )
+
+    return filtered_user_data
+
+
 

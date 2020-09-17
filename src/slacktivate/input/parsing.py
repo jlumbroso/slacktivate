@@ -96,7 +96,7 @@ class UserSourceConfig(SlacktivateConfigSection):
     # }
 
     _required = ["type", ["file", "contents"]]
-    _optional = ["fields", "key"]
+    _optional = ["fields", "key", "filter"]
 
     def __init__(self, value):
         super().__init__(value)
@@ -174,6 +174,14 @@ class UserSourceConfig(SlacktivateConfigSection):
                     key: __expand_record(record)
                     for key, record in value.items()
                 }
+
+        # refilter data
+        if "filter" in self and self.get("fields") is not None:
+            value = slacktivate.input.helpers.refilter_user_data(
+                user_data=value,
+                filter_query=self.get("filter"),
+                reindex=self.get("key") is not None,
+            )
 
         return value
 
@@ -269,6 +277,9 @@ def _load_specifications(
 
     if "users" in obj:
         obj["users"] = list(map(UserSourceConfig, obj["users"]))
+
+        # merge into one big dict
+        # TODO
 
     if "groups" in obj:
         obj["groups"] = list(map(UserGroupConfig, obj["groups"]))
