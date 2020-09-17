@@ -90,3 +90,22 @@ def find_jinja2_template_fields(
         break
 
     return fields
+
+
+def render_jinja2(
+        jinja2_pattern: str,
+        data: typing.Optional[typing.Union[list, dict]],
+) -> str:
+
+    if type(data) is None:
+        return jinja2.Template(jinja2_pattern).render()
+
+    if issubclass(type(data), list) or issubclass(type(data), collections.UserList):
+        return jinja2.Template(jinja2_pattern).render(
+            record=data, *data,
+        )
+
+    if issubclass(type(data), dict) or issubclass(type(data), collections.UserDict):
+        return jinja2.Template(jinja2_pattern).render(
+            record=list(data.values()), **data,
+        )
