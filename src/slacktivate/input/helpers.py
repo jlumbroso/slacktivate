@@ -109,3 +109,49 @@ def render_jinja2(
         return jinja2.Template(jinja2_pattern).render(
             record=list(data.values()), **data,
         )
+
+
+def reindex_user_data(
+        user_data: typing.Union[list, dict],
+        key: typing.Optional[str] = None,
+) -> dict:
+
+    # if a dict, then unindex first
+    if issubclass(type(user_data), dict) or issubclass(type(user_data), collections.UserDict):
+        user_data = list(user_data.values())
+
+    key_pattern = key
+
+    # reindex according to key
+    def pick_key_pattern(record):
+        if key_pattern is not None:
+            return key_pattern
+
+        if issubclass(type(record), dict) or issubclass(type(record), collections.UserDict):
+            if record.get("key") is not None:
+                return record.get("key")
+
+            for key, value in record.items():
+                if "@" in value:
+                    return "{{{{ {} }}}}".format(key)
+
+            return "{{{{ {} }}}}".format(list(record.values())[0])
+
+        if issubclass(type(record), list) or issubclass(type(record), collections.UserList):
+            return "{{ data[0] }}"
+
+        return "{{ data }}"
+
+    def pick_key(record):
+        return render_jinja2(
+            jinja2_pattern=pick_key_pattern(record=record),
+            data=record,
+        )
+
+    user_data = {
+        pick_key(record): record
+        for record in user_data
+    }
+
+    return user_data
+

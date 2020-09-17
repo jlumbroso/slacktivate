@@ -137,21 +137,19 @@ class UserSourceConfig(SlacktivateConfigSection):
         # the 'key' field is to reindex the database
         if "key" in self and self.get("key") is not None:
 
-            # if a dict, then unindex first
-            if issubclass(type(value), dict) or issubclass(type(value), collections.UserDict):
-                value = list(value.values())
-
             key_pattern = self.get("key")
 
-            # reindex according to key
-            value = {
-                slacktivate.input.helpers.render_jinja2(
-                    jinja2_pattern=key_pattern,
-                    data=record,
-                ): record
-                for record in value
-            }
+            # reindex data
+            value = slacktivate.input.helpers.reindex_user_data(
+                user_data=value,
+                key=key_pattern,
+            )
 
+            # store the key
+            for record in value.values():
+                record["key"] = key_pattern
+
+        # create additional programmable fields
         if "fields" in self and self.get("fields") is not None:
 
             def __expand_record(record):
