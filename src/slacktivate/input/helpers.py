@@ -190,4 +190,42 @@ def refilter_user_data(
     return filtered_user_data
 
 
+def deduplicate_user_data(
+        user_data: typing.Union[list, dict],
+        key: typing.Optional[str] = None,
+) -> dict:
 
+    if issubclass(type(user_data), dict) or issubclass(type(user_data), collections.UserDict):
+        # should already not have duplicates
+        # but reindexing according to user-specified key if provided
+        if key is not None:
+            user_data = reindex_user_data(
+                user_data=user_data,
+                key=key,
+            )
+
+    elif issubclass(type(user_data), list) or issubclass(type(user_data), collections.UserList):
+
+        if key is not None:
+            # reindex data according to key then return unindexed
+            user_data = reindex_user_data(
+                user_data=user_data,
+                key=key,
+            )
+            user_data = unindex_data(user_data)
+
+        else:
+            user_data = reindex_user_data(
+                user_data=user_data,
+            )
+            user_data = unindex_data(user_data)
+            # # sort and eliminate duplicates
+            # user_data = sorted(user_data, key=dict)
+            # user_data = [
+            #     user_data[i]
+            #     for i in range(len(user_data))
+            #     if user_data[i-1] != user_data[i]
+            # ]
+
+
+    return user_data

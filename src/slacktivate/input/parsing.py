@@ -1,7 +1,9 @@
 
 import collections
 import copy
+import fnmatch
 import io
+import itertools
 import json
 import os
 import typing
@@ -10,6 +12,21 @@ import comma
 import yaml
 
 import slacktivate.input.helpers
+
+
+__author__ = "Jérémie Lumbroso <lumbroso@cs.princeton.edu>"
+
+__all__ = [
+    "SlacktivateJSONEncoder",
+    "SlacktivateConfigError",
+    "SlacktivateConfigSection",
+
+    "UserSourceConfig",
+    "UserGroupConfig",
+    "ChannelConfig",
+
+    "parse_specification",
+]
 
 
 class SlacktivateJSONEncoder(json.JSONEncoder):
@@ -215,15 +232,18 @@ class UserGroupConfig(SlacktivateConfigSection):
             users: typing.Union[list, dict]
     ) -> typing.List["UserGroupConfig"]:
 
-        users = slacktivate.input.helpers.refilter_user_data(
-            user_data=users,
-            filter_query=self.get("filter"),
-            reindex=False,
-        )
+        target_users = users
+
+        if self.get("filter") is not None:
+            target_users = slacktivate.input.helpers.refilter_user_data(
+                user_data=target_users,
+                filter_query=self.get("filter"),
+                reindex=False,
+            )
 
         subgroup_users = {}
 
-        for user in slacktivate.input.helpers.unindex_data(users):
+        for user in slacktivate.input.helpers.unindex_data(target_users):
 
             group_name = slacktivate.input.helpers.render_jinja2(
                 jinja2_pattern=self.get("name"),
@@ -270,8 +290,69 @@ class ChannelConfig(SlacktivateConfigSection):
         if "filter" in self:
             assert slacktivate.input.helpers.parseable_yaql(self.get("filter", "")), "check filter is parseable"
 
+    def compute(
+            self,
+            users: typing.Union[list, dict],
+            groups: typing.List[UserGroupConfig],
+    ) -> typing.List["ChannelConfig"]:
 
-def _raw_load_specification(
+        target_users = users
+
+        if self.get("groups") is not None:
+            group_globs = self.get("groups")
+
+            if type(group_globs) is str:
+                group_globs = [group_globs]
+
+            group_names = list(map(lambda grp: grp.get("name"), groups))
+            globbed_names = list(set(itertools.chain(*[
+                    fnmatch.filter(group_names, group_glob)
+                    for group_glob in group_globs
+                ])))
+
+            target_users = slacktivate.input.helpers.deduplicate_user_data(list(
+                itertools.chain([
+                    grp
+                    for grp in groups
+                    if grp.get("name") in globbed_names
+                ])))
+
+        if self.get("filter") is not None:
+            target_users = slacktivate.input.helpers.refilter_user_data(
+                user_data=target_users,
+                filter_query=self.get("filter"),
+                reindex=False,
+            )
+
+        subchannel_users = {}
+
+        for user in slacktivate.input.helpers.unindex_data(target_users):
+
+            channel_name = slacktivate.input.helpers.render_jinja2(
+                jinja2_pattern=self.get("name"),
+                data=user,
+            )
+
+            subchannel_users[channel_name] = subchannel_users.get(channel_name, list())
+            subchannel_users[channel_name].append(user)
+
+        channels = []
+
+        for subchannel_name, subchanne_membership in subchannel_users.items():
+
+            channel = copy.deepcopy(self)
+
+            channel.update({
+                "name": subchannel_name,
+                "users": subchanne_membership,
+            })
+
+            channels.append(channel)
+
+        return channels
+
+
+def _raw_parse_specification(
         stream: typing.Optional[io.TextIOBase] = None,
         filename: typing.Optional[str] = None,
         contents: typing.Optional[str] = None,
@@ -302,13 +383,13 @@ def _raw_load_specification(
     return obj
 
 
-def _load_specifications(
+def parse_specification(
         stream: typing.Optional[io.TextIOBase] = None,
         filename: typing.Optional[str] = None,
         contents: typing.Optional[str] = None,
 ) -> typing.Optional[dict]:
 
-    obj = _raw_load_specification(
+    obj = _raw_parse_specification(
         stream=stream,
         filename=filename,
         contents=contents,
