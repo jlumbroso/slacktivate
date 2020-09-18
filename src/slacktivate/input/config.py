@@ -28,9 +28,11 @@ class SlacktivateConfig:
         if config_data is None:
             raise ValueError("`config_data` not supposed to be None")
 
+        self._config = config_data
+
         self._users = {}
 
-        for userconfig in config_data["users"]:
+        for userconfig in self._config.get("users"):
             users = userconfig.load()
             self._users.update(slacktivate.input.helpers.reindex_user_data(
                 user_data=users,
@@ -38,13 +40,13 @@ class SlacktivateConfig:
 
         self._groups = []
 
-        for groupconfig in config_data["groups"]:
+        for groupconfig in self._config.get("groups", list()):
             new_groups = groupconfig.compute(users=self._users)
             self._groups += new_groups
 
         self._channels = []
 
-        for channelconfig in config_data["channels"]:
+        for channelconfig in self._config.get("channels", list()):
             new_channels = channelconfig.compute(
                 users=self._users,
                 groups=self._groups,
@@ -83,3 +85,6 @@ class SlacktivateConfig:
     def channels(self) -> typing.List[slacktivate.input.parsing.ChannelConfig]:
         return copy.deepcopy(self._channels)
 
+    @property
+    def settings(self) -> typing.Dict[str, typing.Any]:
+        return copy.deepcopy(self._config.get("settings", dict()))
