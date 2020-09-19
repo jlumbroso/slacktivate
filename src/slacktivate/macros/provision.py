@@ -12,6 +12,8 @@ import slacktivate.slack.methods
 __author__ = "Jérémie Lumbroso <lumbroso@cs.princeton.edu>"
 
 __all__ = [
+    "deactivate_users",
+    "ensure_users",
 ]
 
 
@@ -59,7 +61,7 @@ def _lookup_slack_user_id_by_email(
 
 def deactivate_users(
         config: slacktivate.input.SlacktivateConfig,
-):
+) -> typing.Tuple[int, int, int]:
 
     # refresh the user cache
     _refresh_users_cache()
@@ -89,13 +91,22 @@ def deactivate_users(
         users_to_deactivate.append(user)
 
     # now deactivate all at once
+    deactivated_count = 0
+
     for user in users_to_deactivate:
-        slacktivate.slack.methods.user_deactivate(user)
+        if slacktivate.slack.methods.user_deactivate(user):
+            deactivated_count += 1
+
+    return (
+        len(_users_cache.items()),
+        len(users_to_deactivate),
+        deactivated_count,
+    )
 
 
 def ensure_users(
         config: slacktivate.input.SlacktivateConfig,
-):
+) -> typing.Dict[str, slacktivate.slack.classes.SlackUser]:
 
     # refresh the user cache
     _refresh_users_cache()
@@ -119,6 +130,21 @@ def ensure_users(
         users_to_create[user_email] = user_attributes
 
     # create the users
-    for user_email, user_attributes in users_to_create.items():
-        pass
+    users_created = {}
 
+    for user_email, user_attributes in users_to_create.items():
+
+        processed_attributes = slacktivate.slack.methods.make_user_dictionary(
+            attributes=user_attributes,
+            include_naming=False,
+            include_image=False,
+            include_fields=False,
+        )
+
+        new_user = slacktivate.slack.methods.user_create(
+            attributes=processed_attributes,
+        )
+
+        users_created[user_email] = new_user
+
+    return users_created

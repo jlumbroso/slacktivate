@@ -19,6 +19,11 @@ __all__ = [
     "user_set_active",
     "user_activate",
     "user_deactivate",
+    "user_create",
+    "user_profile_set",
+
+    "make_user_dictionary",
+    "make_user_extra_fields_dictionary",
 ]
 
 
@@ -126,7 +131,7 @@ def _refresh_custom_fields_cache() -> typing.NoReturn:
     _custom_fields_by_label = list_custom_profile_fields()
 
 
-def _make_user_extra_fields_dictionary(
+def make_user_extra_fields_dictionary(
         attributes: dict,
 ) -> typing.Dict[str, typing.Any]:
 
@@ -142,14 +147,20 @@ def _make_user_extra_fields_dictionary(
     return translated_extra_fields
 
 
-def _make_user_dictionary(
+def make_user_dictionary(
         attributes,
         include_naming=True,
         include_image=True,
         include_fields=True,
 ):
+    if attributes.get("email") is None:
+        return
+
+    user_name = attributes.get("userName")
+    user_name = user_name or attributes.get("email").split("@")[0]
 
     user_dict = {
+        "userName": user_name,
         "emails": [{
             "primary": True,
             "type": None,
@@ -159,13 +170,11 @@ def _make_user_dictionary(
     }
 
     if include_naming:
-        user_name = attributes.get("userName")
         user_dict.update({
             "name": {
                 "givenName": attributes.get("givenName"),
                 "familyName": attributes.get("familyName"),
             },
-            "userName": user_name,
             "displayName": user_name,
             "nickName": user_name,
         })
@@ -179,7 +188,7 @@ def _make_user_dictionary(
         })
 
     if include_fields:
-        extra_fields_dict = _make_user_extra_fields_dictionary(
+        extra_fields_dict = make_user_extra_fields_dictionary(
             attributes=attributes
         )
 
@@ -204,7 +213,7 @@ def user_profile_set(
         result = slack_client.users_profile_set(
             user=user.id,
             profile={
-                "fields": extra_fields
+                "fields": extra_fields,
             },
         )
 
