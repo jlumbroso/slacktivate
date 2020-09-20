@@ -352,7 +352,8 @@ class SlackGroup:
         if string.isalnum() and string[:1].upper() in ["S"]:
             try:
                 group = lookup_group_by_id(group_id=string)
-                return cls.from_group(group=group)
+                if group is not None:
+                    return cls.from_group(group=group)
             except slack_scim.SCIMApiError:
                 pass
 
