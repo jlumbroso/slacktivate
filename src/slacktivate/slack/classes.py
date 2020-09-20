@@ -1,5 +1,5 @@
 
-import time
+import datetime
 import typing
 
 import slack_scim
@@ -16,13 +16,22 @@ __all__ = [
     "lookup_user_by_username",
     "lookup_user_by_email",
 
-    "SlackUser",
+    "lookup_group_by_id",
+    "lookup_group_by_display_name",
 
+    "SlackUser",
+    "SlackUserTypes",
     "to_slack_user",
+
+    "SlackGroup",
+    "SlackGroupTypes",
+    "SlackGroupMember",
+    "to_slack_group",
 ]
 
 
 _SLACK_PHOTOS_FIELD = "photos"
+_SLACK_DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
 
 
 def _escape_filter_param(s):
@@ -253,6 +262,16 @@ def to_slack_user(
 # =============================================================================
 
 
+SlackGroupMember = typing.TypedDict(
+    "SlackGroupMember",
+    {
+        "display": str,
+        "value": str,
+    },
+    total=True,
+)
+
+
 @slacktivate.slack.retry.slack_retry
 def lookup_group_by_id(group_id: str) -> typing.Optional[slack_scim.Group]:
     try:
@@ -375,6 +394,51 @@ class SlackGroup:
 
         if isinstance(value, slack_scim.v1.users.Group):
             return cls.from_group(group=value)
+
+    # *************************************
+
+    @property
+    def id(self) -> typing.Optional[str]:
+        if self._group is not None:
+            return self._group.id
+
+    @property
+    def display_name(self) -> typing.Optional[str]:
+        if self._group is not None:
+            return self._group.display_name
+
+    @property
+    def created(self) -> typing.Optional[datetime.datetime]:
+        if self._group is not None:
+            try:
+                created_string = self._group.meta.created
+                created_datetime = datetime.datetime.strptime(
+                    date_string=created_string,
+                    format=_SLACK_DATETIME_FORMAT)
+                return created_datetime
+            except AttributeError:
+                return
+
+    @property
+    def members(self) -> typing.Optional[typing.List[SlackGroupMember]]:
+        if self._group is not None:
+            member_list = self._group.to_dict().get("members", list())
+            return member_list
+
+    @property
+    def member_ids(self) -> typing.Optional[typing.List[str]]:
+        member_list = self.members
+        if member_list is not None:
+            member_ids = [
+                member["value"]
+                for member in member_list
+            ]
+            return member_ids
+
+    def get_members_as_users(self) -> typing.Optional[typing.List[SlackUser]]:
+        member_ids = self.member_ids
+        if member_ids is not None:
+            return list(map(SlackUser.from_id, member_ids))
 
     # *************************************
 
