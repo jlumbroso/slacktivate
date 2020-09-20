@@ -413,8 +413,8 @@ class SlackGroup:
             try:
                 created_string = self._group.meta.created
                 created_datetime = datetime.datetime.strptime(
-                    date_string=created_string,
-                    format=_SLACK_DATETIME_FORMAT)
+                    created_string,
+                    _SLACK_DATETIME_FORMAT)
                 return created_datetime
             except AttributeError:
                 return
