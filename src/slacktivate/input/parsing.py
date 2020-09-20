@@ -310,12 +310,15 @@ class ChannelConfig(SlacktivateConfigSection):
                     for group_glob in group_globs
                 ])))
 
-            target_users = slacktivate.input.helpers.deduplicate_user_data(list(
-                itertools.chain([
-                    grp
-                    for grp in groups
-                    if grp.get("name") in globbed_names
-                ])))
+            target_users = list(itertools.chain(*[
+                grp.get("users")
+                for grp in groups
+                if grp.get("name") in globbed_names
+            ]))
+
+            target_users = slacktivate.input.helpers.deduplicate_user_data(
+                target_users
+            )
 
         if self.get("filter") is not None:
             target_users = slacktivate.input.helpers.refilter_user_data(

@@ -227,5 +227,4 @@ def deduplicate_user_data(
             #     if user_data[i-1] != user_data[i]
             # ]
 
-
     return user_data
