@@ -32,10 +32,13 @@ def _refresh_users_cache() -> typing.NoReturn:
 
     result = slacktivate.slack.clients.scim().search_users(count=MAX_USER_LIMIT)
 
+    _users_cache_by_email = dict()
+    _users_cache_by_id = dict()
+
     for resource in result.resources:
 
         # create wrapper around user
-        user = slacktivate.slack.classes.SlackUser(user=resource)
+        user = slacktivate.slack.classes.SlackUser(resource=resource)
         if user is None or not user.exists:
             continue
 
