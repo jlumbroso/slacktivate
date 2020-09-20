@@ -282,7 +282,7 @@ def group_patch(
 def group_ensure(
         display_name: str,
         user_ids: typing.Optional[typing.List[str]] = None,
-        remove_members: bool = True,
+        remove_unspecified_members: bool = True,
 ):
     group = slacktivate.slack.classes.SlackGroup.from_display_name(
         display_name=display_name,
@@ -302,7 +302,7 @@ def group_ensure(
 
     # we may need to just extend the existing group (if remove_members is False)
     grp_member_ids = provided_member_ids
-    if not remove_members:
+    if remove_unspecified_members is not None and not remove_unspecified_members:
         grp_member_ids = current_member_ids.union(provided_member_ids)
 
     grp_members = {
