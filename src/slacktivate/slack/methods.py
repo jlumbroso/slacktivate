@@ -337,3 +337,47 @@ def group_ensure(
     )
 
     return result
+
+
+@slacktivate.slack.retry.slack_retry
+def channels_list(
+        by_id: bool = False,
+        only_name: bool = False,
+) -> typing.Optional[typing.Dict[str, typing.Dict[str, typing.Any]]]:
+
+    with slacktivate.slack.clients.managed_api() as client:
+        response = client.conversations_list(
+            types="public_channel,private_channel"
+        )
+
+    # retrieve channels data
+    channels_data = response.data.get("channels")
+    if channels_data is None:
+        return
+
+    key = "name"
+    other_key = "id"
+    if by_id:
+        (key, other_key) = (other_key, key)
+
+    channels_by_key = {
+        row[key]: row[other_key] if only_name else row
+        for row in channels_data
+    }
+
+    return channels_by_key
+
+
+def conversation_member_ids(
+        conversation_id: str,
+) -> typing.List[str]:
+
+    with slacktivate.slack.clients.managed_api() as client:
+        response = client.conversations_members(
+            channel=conversation_id,
+        )
+
+    # retrieve channel's members
+    member_ids_list = response.data.get("members")
+
+    return member_ids_list
