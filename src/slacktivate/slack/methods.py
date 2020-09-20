@@ -28,6 +28,10 @@ __all__ = [
     "group_create",
     "group_patch",
     "group_ensure",
+
+    "channels_list",
+    "channel_create",
+    "conversation_member_ids",
 ]
 
 
@@ -366,6 +370,24 @@ def channels_list(
     }
 
     return channels_by_key
+
+
+@slacktivate.slack.retry.slack_retry
+def channel_create(
+        name: str,
+        is_private: bool = False,
+        return_id: bool = True,
+) -> typing.Optional[typing.Union[str, typing.Dict[str, typing.Any]]]:
+
+    with slacktivate.slack.clients.managed_api() as client:
+        response = client.conversations_create(
+            name=name,
+            is_private=is_private,
+        )
+
+    if response.status_code < 300:
+        channel_data = response.data.get("channels")
+        return channel_data.get("id") if return_id else channel_data
 
 
 def conversation_member_ids(

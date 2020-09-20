@@ -331,3 +331,106 @@ def groups_ensure(
 
     return groups_created
 
+
+# noinspection PyBroadException
+def channels_ensure(
+        config: slacktivate.input.config.SlacktivateConfig,
+        remove_unspecified_members: typing.Optional[bool] = None,
+) -> typing.Optional[typing.Dict[str, str]]:
+
+    # refresh the user cache
+    _refresh_users_cache()
+
+    # lookup setting
+    if remove_unspecified_members is None:
+        remove_unspecified_members = not config.settings.get(
+            slacktivate.input.config.SETTING_EXTEND_CHANNEL_MEMBERSHIPS,
+            False
+        )
+
+    # query channel data
+    channels_by_name = slacktivate.slack.methods.channels_list()
+
+    channels_created = dict()
+
+    # iterate over all users in config
+    for channel_def in config.channels:
+
+        channel_name = channel_def.get("name")
+        if channel_name is None or channel_name == "":
+            continue
+
+        channel_is_private = False if "private" not in channel_def else channel_def.get("private") == True
+
+        existing_member_ids = set()
+
+        if channel_name in channels_by_name:
+            channel_id = channels_by_name.get(channel_name).get("id")
+
+            # NOTE: shared used will be removed because won't be in
+            # local user cache
+
+            existing_members = list(filter(
+                None.__ne__,
+                map(_lookup_slack_user_by_id,
+                    slacktivate.slack.methods.conversation_member_ids(
+                        conversation_id=channel_id,
+                    ))
+            ))
+
+            existing_member_ids = set(map(
+                lambda member: member.id,
+                existing_members
+            ))
+
+        else:
+            # try to create the channel
+            try:
+                channel_id = slacktivate.slack.methods.channel_create(
+                    name=channel_name,
+                    is_private=channel_is_private,
+                )
+                channels_created[channel_name] = channel_id
+            except:
+                # probably already exists, but private or inaccessible to
+                # user (NOTE: handle this better, maybe log?)
+                continue
+
+        if channel_id is None:
+            continue
+
+        # compute user IDs of provided members
+
+        provided_member_ids = set(filter(
+            None.__ne__,
+            map(
+                lambda user: _lookup_slack_user_id_by_email(user["email"]),
+                channel_def["users"]
+            )))
+
+        # users to add, users to remove
+        member_ids_to_invite = list(provided_member_ids.difference(existing_member_ids))
+        member_ids_to_kick = list(existing_member_ids.difference(provided_member_ids))
+
+        try:
+            with slacktivate.slack.clients.managed_api() as client:
+                client.conversations_invite(
+                    channel=channel_id,
+                    users=",".join(member_ids_to_invite),
+                )
+        except:
+            pass
+
+        if remove_unspecified_members:
+            for member_id_to_kick in member_ids_to_kick:
+                try:
+                    with slacktivate.slack.clients.managed_api() as client:
+                        client.conversations_kick(
+                            channel=channel_id,
+                            user=member_id_to_kick,
+                        )
+                except:
+                    continue
+
+    return channels_created
+
