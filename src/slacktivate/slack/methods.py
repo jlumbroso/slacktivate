@@ -278,8 +278,9 @@ def group_patch(
             id=group.id,
             group=changes,
         )
-        result = slacktivate.slack.classes.SlackGroup.from_id(
-            group_id=group.id)
+
+    result = slacktivate.slack.classes.SlackGroup.from_id(
+        group_id=group.id)
 
     if result is not None:
         return result
