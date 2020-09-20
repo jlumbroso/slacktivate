@@ -24,6 +24,10 @@ __all__ = [
 
     "make_user_dictionary",
     "make_user_extra_fields_dictionary",
+
+    "group_create",
+    "group_patch",
+    "group_ensure",
 ]
 
 
@@ -74,7 +78,7 @@ def user_deactivate(user: slacktivate.slack.classes.SlackUserTypes) -> bool:
 @slacktivate.slack.retry.slack_retry
 def user_create(
         attributes: typing.Dict[str, typing.Union[str, typing.Dict[str, str]]]
-) -> slacktivate.slack.classes.SlackUser:
+) -> typing.Optional[slacktivate.slack.classes.SlackUser]:
 
     with slacktivate.slack.clients.managed_scim() as scim:
         result = scim.create_user(
@@ -240,7 +244,7 @@ def user_image_set(
 @slacktivate.slack.retry.slack_retry
 def group_create(
         display_name: str
-) -> slacktivate.slack.classes.SlackGroup:
+) -> typing.Optional[slacktivate.slack.classes.SlackGroup]:
 
     grp = slacktivate.slack.classes.SlackGroup.from_display_name(
         display_name=display_name
@@ -263,7 +267,7 @@ def group_create(
 def group_patch(
         group: slacktivate.slack.classes.SlackGroupTypes,
         changes: dict,
-) -> typing.Optional[slacktivate.slack.classes.SlackUser]:
+) -> typing.Optional[slacktivate.slack.classes.SlackGroup]:
 
     group = slacktivate.slack.classes.to_slack_group(group)
     if group is None or not group.exists:
