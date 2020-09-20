@@ -3,6 +3,7 @@ import datetime
 import typing
 
 import slack_scim
+import slack_scim.v1.user
 import slack_scim.v1.users
 
 import slacktivate.slack.clients
@@ -44,6 +45,24 @@ def _first_or_none(lst: typing.Optional[typing.List[typing.Any]]) -> typing.Any:
     if lst is None or len(lst) == 0:
         return
     return lst[0]
+
+
+def _scim_resource_to_scim_user(
+        resource: slack_scim.v1.users.Resource
+) -> slack_scim.v1.user.User:
+    if resource is not None:
+        return slack_scim.v1.user.User.from_dict(
+            resource.to_dict()
+        )
+
+
+def _scim_resource_to_scim_group(
+        resource: slack_scim.v1.users.Resource
+) -> slack_scim.v1.users.Group:
+    if resource is not None:
+        return slack_scim.v1.users.Group.from_dict(
+            resource.to_dict()
+        )
 
 
 # =============================================================================
@@ -118,6 +137,7 @@ class SlackUser:
             username: typing.Optional[str] = None,
             email: typing.Optional[str] = None,
             user: typing.Optional[slack_scim.User] = None,
+            resource: typing.Optional[slack_scim.v1.users.Resource] = None,
     ):
         self._provided_username = username
         self._provided_email = email
@@ -129,6 +149,9 @@ class SlackUser:
         if email is not None:
             self._user = lookup_user_by_email(email=email)
         if user is not None and isinstance(user, slack_scim.User):
+            self._user = user
+        if resource is not None and isinstance(resource, slack_scim.v1.users.Resource):
+            user = _scim_resource_to_scim_user(resource=resource)
             self._user = user
 
     def refresh(self) -> bool:
@@ -319,6 +342,7 @@ class SlackGroup:
             group_id: typing.Optional[str] = None,
             display_name: typing.Optional[str] = None,
             group: typing.Optional[slack_scim.Group] = None,
+            resource: typing.Optional[slack_scim.v1.users.Resource] = None,
     ):
         self._provided_display_name = display_name
 
@@ -327,6 +351,9 @@ class SlackGroup:
         if display_name is not None:
             self._group = lookup_group_by_display_name(display_name=display_name)
         if group is not None and isinstance(group, slack_scim.Group):
+            self._group = group
+        if resource is not None and isinstance(resource, slack_scim.v1.users.Resource):
+            group = _scim_resource_to_scim_group(resource=resource)
             self._group = group
 
     def refresh(self) -> bool:
