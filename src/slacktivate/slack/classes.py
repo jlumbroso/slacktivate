@@ -232,11 +232,22 @@ class SlackUser:
 SlackUserTypes = typing.Union[str, slack_scim.User, SlackUser]
 
 
-def to_slack_user(value: typing.Optional[SlackUserTypes]) -> typing.Optional[SlackUser]:
+def to_slack_user(
+        value: typing.Optional[SlackUserTypes],
+        only_existing: bool = True,
+) -> typing.Optional[SlackUser]:
+    # if input value is already a SlackUser class, no need to create
+    # a new one?
     if isinstance(value, SlackUser):
-        return value
+        user = value
 
-    return SlackUser.from_any(value=value)
+    else:
+        user = SlackUser.from_any(value=value)
+
+    if not only_existing or user.exists:
+        return user
+
+    return
 
 
 # =============================================================================
@@ -364,14 +375,29 @@ class SlackGroup:
         if isinstance(value, slack_scim.v1.users.Group):
             return cls.from_group(group=value)
 
+    # *************************************
+
+    @property
+    def exists(self) -> bool:
+        return self._group is not None
+
 
 SlackGroupTypes = typing.Union[str, slack_scim.Group, slack_scim.v1.users.Group, SlackGroup]
 
 
 def to_slack_group(
-        value: typing.Optional[SlackGroupTypes]
+        value: typing.Optional[SlackGroupTypes],
+        only_existing: bool = True,
 ) -> typing.Optional[SlackGroup]:
+    # if input value is already a SlackGroup class, no need to create
+    # a new one?
     if isinstance(value, SlackGroup):
-        return value
+        group = value
 
-    return SlackGroup.from_any(value=value)
+    else:
+        group = SlackGroup.from_any(value=value)
+
+    if not only_existing or group.exists:
+        return group
+
+    return
