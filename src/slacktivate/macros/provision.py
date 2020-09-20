@@ -1,6 +1,4 @@
 
-import copy
-import io
 import typing
 
 import slacktivate.helpers.photo

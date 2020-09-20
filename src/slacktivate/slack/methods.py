@@ -1,5 +1,4 @@
 
-import os
 import typing
 
 import slack
@@ -108,7 +107,7 @@ def list_custom_profile_fields(
             # empty dictionary
             return dict()
         else:
-            raise
+            raise exc
 
     profile_fields = response.data.get("profile", dict()).get("fields")
     if profile_fields is None:
@@ -236,3 +235,86 @@ def user_image_set(
         }
     )
     return user
+
+
+@slacktivate.slack.retry.slack_retry
+def group_create(
+        display_name: str
+) -> slacktivate.slack.classes.SlackGroup:
+
+    grp = slacktivate.slack.classes.SlackGroup.from_display_name(
+        display_name=display_name
+    )
+
+    if grp.exists:
+        return grp
+
+    with slacktivate.slack.clients.managed_scim() as scim:
+        new_grp = slack_scim.Group.from_dict({
+            "displayName": display_name
+        })
+        result = scim.create_group(group=new_grp)
+
+    if result is not None:
+        return slacktivate.slack.classes.to_slack_group(result)
+
+
+@slacktivate.slack.retry.slack_retry
+def group_patch(
+        group: slacktivate.slack.classes.SlackGroupTypes,
+        changes: dict,
+) -> typing.Optional[slacktivate.slack.classes.SlackUser]:
+
+    group = slacktivate.slack.classes.to_slack_group(group)
+    if group is None or not group.exists:
+        return
+
+    with slacktivate.slack.clients.managed_scim() as scim:
+        result = scim.patch_group(
+            id=group.id,
+            group=changes,
+        )
+
+    if result is not None:
+        return slacktivate.slack.classes.to_slack_group(result)
+
+
+def group_ensure(
+        display_name: str,
+        user_ids: typing.Optional[typing.List[str]] = None,
+        remove_members: bool = True,
+):
+    group = slacktivate.slack.classes.SlackGroup.from_display_name(
+        display_name=display_name,
+    )
+
+    # ensure group exists
+    if group is None or not group.exists:
+        group = group_create(
+            display_name=display_name,
+        )
+        if group is None:
+            return
+
+    # ensure membership
+    current_member_ids = set() if group is None else set(group.member_ids)
+    provided_member_ids = set() if user_ids is None else set(user_ids)
+
+    # we may need to just extend the existing group (if remove_members is False)
+    grp_member_ids = provided_member_ids
+    if not remove_members:
+        grp_member_ids = current_member_ids.union(provided_member_ids)
+
+    grp_members = {
+        "members": list(map(
+            lambda user_id: slack_scim.GroupMember.from_dict({"value": user_id}),
+            list(grp_member_ids)
+        ))
+    }
+
+    result = group_patch(
+        group=group,
+        changes=grp_members,
+    )
+
+    return result
