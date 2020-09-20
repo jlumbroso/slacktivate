@@ -290,3 +290,44 @@ def users_update(
 
     return users_provisioned
 
+
+def groups_ensure(
+        config: slacktivate.input.config.SlacktivateConfig,
+        remove_unspecified_members: typing.Optional[bool] = None,
+) -> typing.Dict[str, slacktivate.slack.classes.SlackGroup]:
+
+    # refresh the user cache
+    _refresh_users_cache()
+
+    # lookup setting
+    if remove_unspecified_members is None:
+        remove_unspecified_members = not config.settings.get(
+            slacktivate.input.config.SETTING_EXTEND_GROUP_MEMBERSHIPS,
+            False
+        )
+
+    groups_created = dict()
+
+    # iterate over all users in config
+    for group_def in config.groups:
+
+        group_display_name = group_def.get("name")
+        if group_display_name is None or group_display_name == "":
+            continue
+
+        group_user_ids = list(map(
+            lambda user: _lookup_slack_user_id_by_email(user["email"]),
+            group_def["users"]
+        ))
+
+        group_obj = slacktivate.slack.methods.group_ensure(
+            display_name=group_display_name,
+            user_ids=group_user_ids,
+            remove_unspecified_members=remove_unspecified_members,
+        )
+
+        if group_obj is not None:
+            groups_created[group_display_name] = group_obj
+
+    return groups_created
+

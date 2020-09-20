@@ -274,13 +274,15 @@ def group_patch(
         return
 
     with slacktivate.slack.clients.managed_scim() as scim:
-        result = scim.patch_group(
+        scim.patch_group(
             id=group.id,
             group=changes,
         )
+        result = slacktivate.slack.classes.SlackGroup.from_id(
+            group_id=group.id)
 
     if result is not None:
-        return slacktivate.slack.classes.to_slack_group(result)
+        return result
 
 
 def group_ensure(
@@ -306,13 +308,25 @@ def group_ensure(
 
     # we may need to just extend the existing group (if remove_members is False)
     grp_member_ids = provided_member_ids
+    grp_member_ids_to_delete = current_member_ids.difference(provided_member_ids)
     if remove_unspecified_members is not None and not remove_unspecified_members:
-        grp_member_ids = current_member_ids.union(provided_member_ids)
+        grp_member_ids = provided_member_ids.union(current_member_ids)
+        grp_member_ids_to_delete = set()
 
+    # the {"operation": "delete"} is necessary to remove a member from a group in SCIM
+    # http://www.simplecloud.info/specs/draft-scim-api-00.html#edit-resource-with-patch
     grp_members = {
         "members": list(map(
-            lambda user_id: slack_scim.GroupMember.from_dict({"value": user_id}),
+            lambda user_id: slack_scim.GroupMember.from_dict({
+                "value": user_id,
+            }),
             list(grp_member_ids)
+        )) + list(map(
+            lambda user_id: slack_scim.GroupMember.from_dict({
+                "value": user_id,
+                "operation": "delete"
+            }),
+            list(grp_member_ids_to_delete)
         ))
     }
 
