@@ -10,7 +10,21 @@ import slacktivate.input.parsing
 __author__ = "Jérémie Lumbroso <lumbroso@cs.princeton.edu>"
 
 __all__ = [
+
+    "SETTING_KEEP_CUSTOMIZED_PHOTOS",
+    "SETTING_KEEP_CUSTOMIZED_NAME",
+    "ALL_SETTINGS",
+    
     "SlacktivateConfig",
+]
+
+
+SETTING_KEEP_CUSTOMIZED_PHOTOS = "keep_customized_photos"
+SETTING_KEEP_CUSTOMIZED_NAME = "keep_customized_name"
+
+ALL_SETTINGS: typing.List[str] = [
+    SETTING_KEEP_CUSTOMIZED_PHOTOS,
+    SETTING_KEEP_CUSTOMIZED_NAME
 ]
 
 

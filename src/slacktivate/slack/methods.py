@@ -21,6 +21,7 @@ __all__ = [
     "user_deactivate",
     "user_create",
     "user_profile_set",
+    "user_image_set",
 
     "make_user_dictionary",
     "make_user_extra_fields_dictionary",
@@ -219,3 +220,19 @@ def user_profile_set(
 
     if result is not None and result["ok"]:
         return result["profile"]
+
+
+def user_image_set(
+        user: slacktivate.slack.classes.SlackUserTypes,
+        image_url: str,
+) -> typing.Optional[slacktivate.slack.classes.SlackUser]:
+    user = user_patch(
+        user=user,
+        changes={
+            "photos": {
+                "value": image_url,
+                "primary": True,
+            }
+        }
+    )
+    return user

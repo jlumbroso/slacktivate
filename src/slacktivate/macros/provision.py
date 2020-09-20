@@ -3,7 +3,7 @@ import copy
 import io
 import typing
 
-import slacktivate.input
+import slacktivate.helpers.photo
 import slacktivate.input.helpers
 import slacktivate.input.parsing
 import slacktivate.slack.methods
@@ -12,8 +12,9 @@ import slacktivate.slack.methods
 __author__ = "Jérémie Lumbroso <lumbroso@cs.princeton.edu>"
 
 __all__ = [
-    "deactivate_users",
-    "ensure_users",
+    "users_deactivate",
+    "users_ensure",
+    "users_update",
 ]
 
 
@@ -59,8 +60,8 @@ def _lookup_slack_user_id_by_email(
         return user.id
 
 
-def deactivate_users(
-        config: slacktivate.input.SlacktivateConfig,
+def users_deactivate(
+        config: slacktivate.input.config.SlacktivateConfig,
 ) -> typing.Tuple[int, int, int]:
 
     # refresh the user cache
@@ -104,8 +105,8 @@ def deactivate_users(
     )
 
 
-def ensure_users(
-        config: slacktivate.input.SlacktivateConfig,
+def users_ensure(
+        config: slacktivate.input.config.SlacktivateConfig,
 ) -> typing.Dict[str, slacktivate.slack.classes.SlackUser]:
 
     # refresh the user cache
@@ -134,11 +135,13 @@ def ensure_users(
 
     for user_email, user_attributes in users_to_create.items():
 
+        # include all attributes because user is freshly created,
+        # no risk to overwrite user-modified attributes
         processed_attributes = slacktivate.slack.methods.make_user_dictionary(
             attributes=user_attributes,
-            include_naming=False,
-            include_image=False,
-            include_fields=False,
+            include_naming=True,
+            include_image=True,
+            include_fields=True,
         )
 
         new_user = slacktivate.slack.methods.user_create(
@@ -148,3 +151,98 @@ def ensure_users(
         users_created[user_email] = new_user
 
     return users_created
+
+
+def users_update(
+        config: slacktivate.input.config.SlacktivateConfig,
+        overwrite_name: typing.Optional[bool] = None,
+        overwrite_image: typing.Optional[bool] = None,
+) -> typing.Dict[str, slacktivate.slack.classes.SlackUser]:
+
+    # refresh the user cache
+    _refresh_users_cache()
+
+    users_provisioned = {}
+
+    # iterate over all users in config
+    for user_email, user_attributes in config.users.items():
+
+        user = _users_cache.get(user_email.lower())
+
+        # only interested in users both in:
+        #  1. the configuration file AND
+        #  2. the Slack enrollment
+        if user is None:
+            continue
+        user = typing.cast(slacktivate.slack.classes.SlackUser, user)
+
+        # determine what are the overwriting rules
+
+        keep_name = config.settings.get(
+            slacktivate.input.config.SETTING_KEEP_CUSTOMIZED_NAME,
+            True,
+            )
+
+        keep_photo = config.settings.get(
+            slacktivate.input.config.SETTING_KEEP_CUSTOMIZED_PHOTOS,
+            True,
+        )
+
+        if overwrite_name is not None:
+            keep_name = not overwrite_name
+
+        if overwrite_image is not None:
+            keep_photo = not overwrite_image
+
+        # change name if necessary
+
+        if not keep_name:
+            slacktivate.slack.methods.user_patch(
+                user=user,
+                changes=slacktivate.slack.methods.make_user_dictionary(
+                    attributes=user_attributes,
+                    include_naming=True,
+                    include_image=False,
+                    include_fields=False,
+                )
+            )
+
+        # change image if necessary
+
+        user_image_type = slacktivate.helpers.photo.detect_profile_image_type(
+            image_url=user.image_url,
+            directory_img=user_attributes.get("image_url"),
+        )
+
+        if (
+                # there is an available image for this user
+                user_attributes.get("image_url") is not None and (
+
+                    # either the image is None or Anonymous
+                    (
+                        user_image_type == slacktivate.helpers.photo.ProfileImageType.NONE or
+                        user_image_type == slacktivate.helpers.photo.ProfileImageType.ANONYMOUS
+                    )
+                    or
+                    # it is okay to replace it
+                    not keep_photo
+                )
+        ):
+            slacktivate.slack.methods.user_image_set(
+                user=user,
+                image_url=user_attributes.get("image_url"),
+            )
+
+        # change fields
+
+        result = slacktivate.slack.methods.user_profile_set(
+            user=user,
+            extra_fields=slacktivate.slack.methods.make_user_extra_fields_dictionary(
+                attributes=user_attributes,
+            )
+        )
+
+        users_provisioned[user_email] = result
+
+    return users_provisioned
+

@@ -49,6 +49,24 @@ ANONYMOUS_AVATAR_BINARY_DATA = base64.b64decode("".join(
 ANONYMOUS_AVATAR_IMAGE = PIL.Image.open(io.BytesIO(ANONYMOUS_AVATAR_BINARY_DATA))
 
 
+# noinspection PyBroadException
+def _request_image(image_url: str) -> typing.Optional[PIL.Image.Image]:
+    data = None
+    try:
+        r = requests.get(image_url)
+        if r.ok:
+            data = r.content
+    except:
+        pass
+
+    if data is None:
+        return
+
+    img = PIL.Image.open(io.BytesIO(data))
+
+    return img
+
+
 class ProfileImageType(enum.Enum):
     NONE = 'none'
     ANONYMOUS = 'anonymous'
@@ -235,24 +253,13 @@ def is_image_likely_identical(img1, img2):
 # noinspection PyBroadException
 def detect_profile_image_type(
         image_url: typing.Optional[str],
-        provisioned_img: typing.Optional[typing.Union[bytes, str, PIL.Image.Image]] = None,
+        directory_img: typing.Optional[typing.Union[bytes, str, PIL.Image.Image]] = None,
 ) -> ProfileImageType:
 
     if image_url is None or image_url == "":
         return ProfileImageType.NONE
 
-    data = None
-    try:
-        r = requests.get(image_url)
-        if r.ok:
-            data = r.content
-    except:
-        pass
-
-    if data is None:
-        return ProfileImageType.NONE
-
-    img = PIL.Image.open(io.BytesIO(data))
+    img = _request_image(image_url=image_url)
 
     if img.size == (0, 0):
         return ProfileImageType.NONE
@@ -260,11 +267,19 @@ def detect_profile_image_type(
     if is_image_anonymous(img):
         return ProfileImageType.ANONYMOUS
 
-    if type(provisioned_img) is bytes:
-        provisioned_img = PIL.Image.open(io.BytesIO(provisioned_img))
+    if type(directory_img) is bytes:
+        directory_img = PIL.Image.open(io.BytesIO(directory_img))
+
+    if type(directory_img) is str:
+        # could be an URL
+        if "http" in directory_img:
+            directory_img = _request_image(image_url=directory_img)
+        else:
+            # or base64 encoded image: TO implement
+            raise NotImplementedError("only urls are supported at this time")
 
     try:
-        if is_image_likely_identical(img1=img, img2=provisioned_img):
+        if is_image_likely_identical(img1=img, img2=directory_img):
             return ProfileImageType.PROVISIONED
     except:
         pass

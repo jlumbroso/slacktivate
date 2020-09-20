@@ -22,6 +22,9 @@ __all__ = [
 ]
 
 
+_SLACK_PHOTOS_FIELD = "photos"
+
+
 def _escape_filter_param(s):
     if s is None:
         return ""
@@ -208,6 +211,22 @@ class SlackUser:
             return False
 
         return self._user.active
+
+    @property
+    def image_url(self) -> typing.Optional[str]:
+        if not self.exists:
+            return
+
+        if _SLACK_PHOTOS_FIELD not in self._user.__dict__:
+            return
+
+        photos = self._user.__dict__[_SLACK_PHOTOS_FIELD]
+
+        if len(photos) < 1:
+            return
+
+        # NOTE: maybe look for the primary one instead of the first one
+        return photos[0].value
 
 
 SlackUserTypes = typing.Union[str, slack_scim.User, SlackUser]
