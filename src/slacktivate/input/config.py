@@ -13,6 +13,7 @@ __all__ = [
 
     "SETTING_KEEP_CUSTOMIZED_PHOTOS",
     "SETTING_KEEP_CUSTOMIZED_NAME",
+    "SETTING_EXTEND_GROUP_MEMBERSHIPS",
     "ALL_SETTINGS",
     
     "SlacktivateConfig",
