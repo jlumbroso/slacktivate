@@ -6,6 +6,7 @@ import typing
 import slacktivate.helpers.photo
 import slacktivate.input.helpers
 import slacktivate.input.parsing
+import slacktivate.slack.classes
 import slacktivate.slack.methods
 
 
@@ -22,31 +23,39 @@ MAX_USER_LIMIT = 1000
 SLACK_BOTS_DOMAIN = "@slack-bots.com"
 
 
-_users_cache: typing.Optional[typing.Dict[str, slacktivate.slack.classes.SlackUser]] = None
+_users_cache_by_email: typing.Optional[typing.Dict[str, slacktivate.slack.classes.SlackUser]] = None
+_users_cache_by_id: typing.Optional[typing.Dict[str, slacktivate.slack.classes.SlackUser]] = None
 
 
 def _refresh_users_cache() -> typing.NoReturn:
-    global _users_cache
+    global _users_cache_by_email, _users_cache_by_id
 
     result = slacktivate.slack.clients.scim().search_users(count=MAX_USER_LIMIT)
 
-    # index by primary email
-    _users_cache = {
-        resource.emails[0].value.lower(): slacktivate.slack.classes.SlackUser(user=resource)
-        for resource in result.resources
-    }
+    for resource in result.resources:
+
+        # create wrapper around user
+        user = slacktivate.slack.classes.SlackUser(user=resource)
+        if user is None or not user.exists:
+            continue
+
+        # index by primary email
+        _users_cache_by_email[user.email] = user
+
+        # index by id
+        _users_cache_by_id[user.id] = user
 
 
 def _lookup_slack_user_by_email(
         email: str
 ) -> typing.Optional[slacktivate.slack.classes.SlackUser]:
 
-    if _users_cache is None:
+    if _users_cache_by_email is None:
         _refresh_users_cache()
 
     email = email.lower()
 
-    result = _users_cache.get(email)
+    result = _users_cache_by_email.get(email)
 
     return result
 
@@ -58,6 +67,39 @@ def _lookup_slack_user_id_by_email(
     user = _lookup_slack_user_by_email(email=email)
     if user is not None:
         return user.id
+
+
+def _lookup_slack_user_by_id(
+        user_id: str
+) -> typing.Optional[slacktivate.slack.classes.SlackUser]:
+
+    if _users_cache_by_id is None:
+        _refresh_users_cache()
+
+    result = _users_cache_by_id.get(user_id)
+
+    return result
+
+
+def _iterate_emails() -> typing.KeysView[str]:
+    if _users_cache_by_email is None:
+        _refresh_users_cache()
+
+    return _users_cache_by_email.keys()
+
+
+def _iterate_email_and_user() -> typing.ItemsView[str, slacktivate.slack.classes.SlackUser]:
+    if _users_cache_by_email is None:
+        _refresh_users_cache()
+
+    return _users_cache_by_email.items()
+
+
+def _iterate_user_id_and_user() -> typing.ItemsView[str, slacktivate.slack.classes.SlackUser]:
+    if _users_cache_by_id is None:
+        _refresh_users_cache()
+
+    return _users_cache_by_id.items()
 
 
 def users_deactivate(
@@ -77,7 +119,7 @@ def users_deactivate(
 
     # iterate over all users currently on the Slack
     # => goal is to identify anybody not in the configuration
-    for user_email, user in _users_cache.items():
+    for user_email, user in _iterate_email_and_user():
 
         # check for exceptions, and skip them
         if SLACK_BOTS_DOMAIN in user_email:
@@ -99,7 +141,7 @@ def users_deactivate(
             deactivated_count += 1
 
     return (
-        len(_users_cache.items()),
+        len(_iterate_email_and_user()),
         len(users_to_deactivate),
         deactivated_count,
     )
@@ -116,7 +158,7 @@ def users_ensure(
     # NOTE: if needed to deal with alternate emails, would be here
     active_user_emails = [
         user_email
-        for user_email in _users_cache.keys()
+        for user_email in _iterate_emails()
     ]
 
     users_to_create = {}
@@ -167,7 +209,8 @@ def users_update(
     # iterate over all users in config
     for user_email, user_attributes in config.users.items():
 
-        user = _users_cache.get(user_email.lower())
+        # lookup user in cache that was just refreshed
+        user = _lookup_slack_user_by_email(email=user_email)
 
         # only interested in users both in:
         #  1. the configuration file AND
