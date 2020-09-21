@@ -105,7 +105,8 @@ def _iterate_user_id_and_user() -> typing.ItemsView[str, slacktivate.slack.class
 
 def users_deactivate(
         config: slacktivate.input.config.SlacktivateConfig,
-) -> typing.Tuple[int, int, int]:
+        dry_run: bool = False,
+) -> typing.Union[typing.List[slacktivate.slack.classes.SlackUser], typing.Tuple[int, int, int]]:
 
     # refresh the user cache
     _refresh_users_cache()
@@ -134,6 +135,10 @@ def users_deactivate(
         # be deactivated
         users_to_deactivate.append(user)
 
+    # if dry-run, return list
+    if dry_run:
+        return users_to_deactivate
+
     # now deactivate all at once
     deactivated_count = 0
 
@@ -150,7 +155,8 @@ def users_deactivate(
 
 def users_ensure(
         config: slacktivate.input.config.SlacktivateConfig,
-) -> typing.Dict[str, slacktivate.slack.classes.SlackUser]:
+        dry_run: bool = False,
+) -> typing.Union[typing.Dict[str, typing.Dict[str, typing.Any]], typing.Dict[str, slacktivate.slack.classes.SlackUser]]:
 
     # refresh the user cache
     _refresh_users_cache()
@@ -172,6 +178,10 @@ def users_ensure(
             continue
 
         users_to_create[user_email] = user_attributes
+
+    # if dry-run, return list
+    if dry_run:
+        return users_to_create
 
     # create the users
     users_created = {}
