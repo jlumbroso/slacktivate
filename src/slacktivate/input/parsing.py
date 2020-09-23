@@ -108,6 +108,16 @@ class SlacktivateConfigSection(collections.UserDict):
         return dict(self)
 
 
+class UserSourceException(ValueError):
+    def __init__(self, message="", *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._message = message
+
+    @property
+    def message(self):
+        return self._message
+
+
 class UserSourceConfig(SlacktivateConfigSection):
     # {
     #     "file": "filename.json",
@@ -124,10 +134,19 @@ class UserSourceConfig(SlacktivateConfigSection):
         super().__init__(value)
 
         if "file" in self:
-            assert os.path.exists(self.get("file")), "check user config exists"
+            if not os.path.exists(self.get("file")):
+                raise UserSourceException(
+                    "configuration file problem: user source '{}' cannot be found\n(pwd: '{}')".format(
+                        self.get("file"),
+                        os.getcwd()),
+                )
 
         if "key" in self:
-            assert slacktivate.input.helpers.parseable_jinja2(self.get("key")), "check 'key' field"
+            if not slacktivate.input.helpers.parseable_jinja2(self.get("key")):
+                raise UserSourceException(
+                    "configuration file problem: no 'key' field to process '{}'".format(
+                        self.get("file")),
+                )
 
     def _load(self) -> list:
 
