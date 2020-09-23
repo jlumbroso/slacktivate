@@ -4,13 +4,17 @@ import copy
 import fnmatch
 import io
 import itertools
+import jinja2
 import json
 import os
+import textwrap
 import typing
 
 import comma
 import yaml
+import yaml.parser
 
+import slacktivate.helpers.dict_serializer
 import slacktivate.input.helpers
 
 
@@ -357,8 +361,8 @@ class ChannelConfig(SlacktivateConfigSection):
 
 def _raw_parse_specification(
         stream: typing.Optional[io.TextIOBase] = None,
-        filename: typing.Optional[str] = None,
         contents: typing.Optional[str] = None,
+        filename: typing.Optional[str] = None,
 ) -> typing.Optional[dict]:
     if stream is not None:
         try:
@@ -367,12 +371,12 @@ def _raw_parse_specification(
             pass
         contents = stream.read(),
 
+    elif contents is not None:
+        pass
+
     elif filename is not None and os.path.exists(filename):
         with open(filename, mode="r") as f:
             contents = f.read()
-
-    elif contents is not None:
-        pass
 
     else:
         # nothing is set
@@ -386,17 +390,65 @@ def _raw_parse_specification(
     return obj
 
 
+class ParsingException(yaml.parser.ParserError):
+
+    _EXCEPTION_MESSAGE_TEMPLATE = textwrap.dedent(
+        """
+        YAML parsing error: {{ context.context }}
+          in "{{ context.context_mark.name }}", line {{ context.context_mark.line }}, column {{ context.context_mark.column }}
+        {{ context.problem }}
+          in "{{ context.problem_mark.name }}", line {{ context.problem_mark.line }}, column {{ context.problem_mark.column }}
+        """)[1:]
+
+    @property
+    def filename(self):
+        if "_filename" in self.__dict__:
+            return self.__dict__.get("_filename")
+        return self.context["context_mark"]["name"]
+
+    @filename.setter
+    def filename(self, value: str):
+        self._filename = value
+
+    @property
+    def message(self):
+        jinja_template = jinja2.Template(source=self._EXCEPTION_MESSAGE_TEMPLATE)
+        data = slacktivate.helpers.dict_serializer.to_dict(self)
+
+        def replace_key(obj, key, value):
+            if issubclass(type(obj), dict):
+                return {
+                    _k: replace_key(_v, key, value) if _k != key else value
+                    for (_k, _v) in obj.items()
+                }
+            return obj
+
+        if self.filename is not None:
+            data = replace_key(data, "name", self.filename)
+
+        rendered_message = jinja_template.render(**data)
+
+        return rendered_message
+
+
 def parse_specification(
         stream: typing.Optional[io.TextIOBase] = None,
-        filename: typing.Optional[str] = None,
         contents: typing.Optional[str] = None,
+        filename: typing.Optional[str] = None,
 ) -> typing.Optional[dict]:
 
-    obj = _raw_parse_specification(
-        stream=stream,
-        filename=filename,
-        contents=contents,
-    )
+    try:
+        obj = _raw_parse_specification(
+            stream=stream,
+            contents=contents,
+            filename=filename,
+        )
+    except yaml.parser.ParserError as exc:
+        # will enhance message reporting
+        new_exc = ParsingException(exc)
+        if filename is not None:
+            new_exc.filename = filename
+        raise new_exc
 
     if "users" in obj:
         obj["users"] = list(map(UserSourceConfig, obj["users"]))
