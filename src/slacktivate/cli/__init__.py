@@ -1,80 +1,88 @@
 import os
+import io
 import sys
+import typing
 
 import click
 import click_help_colors
 import click_spinner
 
+import slacktivate.cli.helpers
 import slacktivate.input.config
 import slacktivate.input.parsing
 
 
-class Repo(object):
-    def __init__(self, home=None, debug=False):
-        self.home = os.path.abspath(home or '.')
-        self.debug = debug
+try:
+    import dotenv
+
+    if not dotenv.load_dotenv():
+        dotenv.load_dotenv(dotenv.find_dotenv())
+
+except ImportError:
+    raise
+
 
 @click.group(
     cls=click_help_colors.HelpColorsGroup,
     help_headers_color='bright_green',
     help_options_color='green'
 )
-@click.option("--token", envvar="SLACK_TOKEN", metavar="$SLACK_TOKEN", help="Slack API token.")
-@click.option('--repo-home', envvar='REPO_HOME', default='.repo')
-@click.option('--debug/--no-debug', default=False,
-              envvar='REPO_DEBUG')
+@click.option(
+    "--token",
+    envvar="SLACK_TOKEN", metavar="$SLACK_TOKEN",
+    help="Slack API token (requires being an owner or admin)."
+)
+@click.option(
+    "--spec",
+    type=click.File("rb"),
+    default="specification.yaml", envvar="SLACKTIVATE_SPEC", metavar="SPEC",
+    help="Provide the specification for the Slack workspace."
+)
+@click.option(
+    "-y", "--dry-run",
+    is_flag=True, envvar="SLACKTIVATE_DRY_RUN", default=False,
+    help="Do not actually perform the action."
+)
 @click.pass_context
-def cli(ctx, token, repo_home, debug):
-    ctx.obj = token
-    #ctx.obj = Repo(repo_home, debug)
+def cli(ctx, token, spec, dry_run):
+    ctx.obj = slacktivate.cli.helpers.SlacktivateCliContext(
+        dry_run=dry_run,
+        slack_token=token,
+        spec_file=spec,
+    )
 
 
-import typing
+@cli.group(name="list")
+@click.argument("config", type=click.File('rb'), envvar="SLACKTIVATE_CONFIG", metavar="CONFIG")
+@click.pass_context
+def cli_list(ctx):
+    pass
+
+@cli_list.group(name="users")
+@click.pass_context
+def list_users(ctx):
+    pass
 
 
-_ELEMENTARY_TYPE = [int, str, float, bool, type(None)]
-
-
-def _is_elementary_type(obj):
-    for typ in _ELEMENTARY_TYPE:
-        if issubclass(type(obj), typ):
-            return True
-    return False
-
-
-def to_dict(obj):
-    if _is_elementary_type(obj):
-        return obj
-
-    if isinstance(obj, list):
-        return obj
-
-    if isinstance(obj, dict):
-        return {
-            key: to_dict(value)
-            for (key, value) in obj.items()
-        }
-
-    return to_dict(obj.__dict__)
 
 
 @cli.command()
-@click.argument('config', type=click.File('rb'))
+@click.argument("spec", type=click.File('rb'), envvar="SLACKTIVATE_SPEC", metavar="SPEC")
 @click.pass_context
-def validate(ctx, config):
+def validate(ctx, spec):
     """
-    Validate the configuration file CONFIG
+    Validate the configuration file SPEC
     """
     click.secho(
-        message="1. Attempting to parse configuration file \"{}\"...  ".format(config.name),
+        message="1. Attempting to parse configuration file \"{}\"...  ".format(spec.name),
         nl=False,
         err=True,
     )
     try:
         with click_spinner.spinner():
             sc = slacktivate.input.parsing.parse_specification(
-                contents=config.read().decode("ascii"),
-                filename=config.name,
+                contents=spec.read().decode("ascii"),
+                filename=spec.name,
             )
     except slacktivate.input.parsing.ParsingException or slacktivate.input.parsing.UserSourceException as exc:
         click.secho("\nERROR: ", nl=False, err=True, fg="red", bold=True)
@@ -118,5 +126,6 @@ def validate(ctx, config):
 def main():
     return sys.exit(cli())
 
+
 if __name__ == "__main__":
-    main() # pragma: no cover
+    main()
