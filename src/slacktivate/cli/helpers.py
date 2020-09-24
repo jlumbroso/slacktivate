@@ -163,6 +163,19 @@ cli_opt_dry_run = click.option(
     help="Do not actually perform the action."
 )
 
+OutputFormatType = typing.Union[
+    typing.Literal["term"],
+    typing.Literal["json"],
+    typing.Literal["csv"],
+]
+
+cli_opt_output_format = click.option(
+    "--format", "-f",
+    type=click.Choice(["term", "json", "csv"], case_sensitive=False),
+    default="term", metavar="FORMAT",
+    help="Output format (e.g.: term, json, csv, ...)"
+)
+
 
 cli_root = chain_functions(*[
     cli_root_group_green,
