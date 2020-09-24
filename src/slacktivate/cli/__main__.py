@@ -22,30 +22,9 @@ except ImportError:
     raise
 
 
-@click.group(
-    cls=click_help_colors.HelpColorsGroup,
-    help_headers_color='bright_green',
-    help_options_color='green'
-)
-@click.option(
-    "--token",
-    envvar="SLACK_TOKEN", metavar="$SLACK_TOKEN",
-    help="Slack API token (requires being an owner or admin)."
-)
-@click.option(
-    "--spec",
-    type=click.File("rb"),
-    default="specification.yaml", envvar="SLACKTIVATE_SPEC", metavar="SPEC",
-    help="Provide the specification for the Slack workspace."
-)
-@click.option(
-    "-y", "--dry-run",
-    is_flag=True, envvar="SLACKTIVATE_DRY_RUN", default=False,
-    help="Do not actually perform the action."
-)
-@click.pass_context
-def cli(ctx, token, spec, dry_run):
-    ctx.obj = slacktivate.cli.helpers.SlacktivateCliContext(
+@slacktivate.cli.helpers.cli_root
+def cli(ctx: slacktivate.cli.helpers.AbstractSlacktivateCliContext, token, spec, dry_run):
+    ctx.obj = slacktivate.cli.helpers.SlacktivateCliContextObject(
         dry_run=dry_run,
         slack_token=token,
         spec_file=spec,
@@ -67,22 +46,28 @@ def list_users(ctx):
 
 
 @cli.command()
-@click.argument("spec", type=click.File('rb'), envvar="SLACKTIVATE_SPEC", metavar="SPEC")
+@slacktivate.cli.helpers.cli_arg_spec
 @click.pass_context
-def validate(ctx, spec):
+def validate(
+        ctx: slacktivate.cli.helpers.AbstractSlacktivateCliContext,
+        spec: typing.Optional[io.BufferedReader]
+):
     """
     Validate the configuration file SPEC
     """
+    if spec is not None:
+        ctx.obj.set_spec_file(spec_file=spec)
+
     click.secho(
-        message="1. Attempting to parse configuration file \"{}\"...  ".format(spec.name),
+        message="1. Attempting to parse configuration file \"{}\"...  ".format(ctx.obj.spec_filename),
         nl=False,
         err=True,
     )
     try:
         with click_spinner.spinner():
             sc = slacktivate.input.parsing.parse_specification(
-                contents=spec.read().decode("ascii"),
-                filename=spec.name,
+                contents=ctx.obj.spec_contents,
+                filename=ctx.obj.spec_filename,
             )
     except slacktivate.input.parsing.ParsingException or slacktivate.input.parsing.UserSourceException as exc:
         click.secho("\nERROR: ", nl=False, err=True, fg="red", bold=True)
