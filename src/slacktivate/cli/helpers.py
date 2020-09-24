@@ -12,9 +12,32 @@ import slacktivate.input.parsing
 __author__ = "Jérémie Lumbroso <lumbroso@cs.princeton.edu>"
 
 __all__ = [
+    "chain_functions",
+
     "SlacktivateCliContext",
 
+    "cli_root_group_green",
+    "cli_opt_token",
+    "cli_opt_spec",
+    "cli_opt_dry_run",
+
+    "cli_root",
 ]
+
+
+# From: https://stackoverflow.com/a/58005342/408734
+def chain_functions(*funcs: typing.List[typing.Callable]) -> typing.Callable:
+
+    def _chain(*args, **kwargs):
+        cur_args, cur_kwargs = args, kwargs
+        ret = None
+        for f in reversed(funcs):
+            f = typing.cast(typing.Callable, f)
+            cur_args, cur_kwargs = (f(*cur_args, **cur_kwargs), ), {}
+            ret = cur_args[0]
+        return ret
+
+    return _chain
 
 
 class SlacktivateCliContext:
@@ -84,4 +107,35 @@ class SlacktivateCliContext:
             return self._specification
 
 
-token_decorator = click.option("--token", envvar="SLACK_TOKEN", metavar="$SLACK_TOKEN", help="Slack API token.")
+cli_root_group_green = click.group(
+    cls=click_help_colors.HelpColorsGroup,
+    help_headers_color='bright_green',
+    help_options_color='green'
+)
+
+cli_opt_token = click.option(
+    "--token",
+    envvar="SLACK_TOKEN", metavar="$SLACK_TOKEN",
+    help="Slack API token (requires being an owner or admin)."
+)
+
+cli_opt_spec = click.option(
+    "--spec",
+    type=click.File("rb"),
+    default="specification.yaml", envvar="SLACKTIVATE_SPEC", metavar="SPEC",
+    help="Provide the specification for the Slack workspace."
+)
+
+cli_opt_dry_run = click.option(
+    "-y", "--dry-run",
+    is_flag=True, envvar="SLACKTIVATE_DRY_RUN", default=False,
+    help="Do not actually perform the action."
+)
+
+
+cli_root = chain_functions(*[
+    cli_root_group_green,
+    cli_opt_token, cli_opt_spec, cli_opt_dry_run,
+    click.pass_context,
+])
+
