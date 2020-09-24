@@ -14,7 +14,8 @@ __author__ = "Jérémie Lumbroso <lumbroso@cs.princeton.edu>"
 __all__ = [
     "chain_functions",
 
-    "SlacktivateCliContext",
+    "SlacktivateCliContextObject",
+    "AbstractSlacktivateCliContext",
 
     "cli_root_group_green",
     "cli_opt_token",
@@ -40,7 +41,7 @@ def chain_functions(*funcs: typing.List[typing.Callable]) -> typing.Callable:
     return _chain
 
 
-class SlacktivateCliContext:
+class SlacktivateCliContextObject:
 
     _dry_run: bool = False
     _slack_token: typing.Optional[str] = None
@@ -63,10 +64,10 @@ class SlacktivateCliContext:
 
         # configuration file
         if spec_file is not None:
-            self.set_config_file(config_file=spec_file)
+            self.set_spec_file(spec_file=spec_file)
 
-    def set_config_file(self, config_file: io.BufferedReader, no_rewind: bool = True):
-        self._spec_file = config_file
+    def set_spec_file(self, spec_file: io.BufferedReader, no_rewind: bool = True):
+        self._spec_file = spec_file
 
         # cache content
         if self._spec_file is not None:
@@ -96,15 +97,39 @@ class SlacktivateCliContext:
             return self._spec_file.name
 
     @property
+    def spec_contents(self) -> typing.Optional[str]:
+        return self._spec_contents
+
+    @property
     def specification(self) -> typing.Optional[slacktivate.input.parsing.SlacktivateConfigSection]:
         if self._spec_contents is not None and self._specification is None:
-            self._specification = slacktivate.input.parsing.parse_specification(
-                contents=self._spec_contents,
-                filename=self.spec_filename,
-            )
+            try:
+                self._specification = slacktivate.input.parsing.parse_specification(
+                    contents=self._spec_contents,
+                    filename=self.spec_filename,
+                )
+            except slacktivate.input.parsing.ParsingException:
+                return
 
         if self._specification is not None:
             return self._specification
+
+
+class AbstractSlacktivateCliContext:
+
+    def __init__(self, ctx_obj):
+        self._ctx_obj = ctx_obj
+
+    @property
+    def obj(self) -> SlacktivateCliContextObject:
+        return self._ctx_obj
+
+    @obj.setter
+    def obj(
+            self,
+            value: typing.Optional[SlacktivateCliContextObject]
+    ) -> typing.NoReturn:
+        self._ctx_obj = value
 
 
 cli_root_group_green = click.group(
@@ -124,6 +149,12 @@ cli_opt_spec = click.option(
     type=click.File("rb"),
     default="specification.yaml", envvar="SLACKTIVATE_SPEC", metavar="SPEC",
     help="Provide the specification for the Slack workspace."
+)
+
+cli_arg_spec = click.argument(
+    "spec",
+    type=click.File('rb'),
+    default=None, envvar="SLACKTIVATE_CONFIG", metavar="SPEC", required=False,
 )
 
 cli_opt_dry_run = click.option(
