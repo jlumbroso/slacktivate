@@ -50,6 +50,11 @@ _slack_client: typing.Optional[slack.WebClient] = None
 _slack_scim: typing.Optional[slack_scim.SCIMClient] = None
 
 
+# enum constants for code factor below
+_CLIENT_TYPE_API = 0
+_CLIENT_TYPE_SCIM = 1
+
+
 def login(
         token: typing.Optional[str] = None,
         silent_error: bool = False,
@@ -81,21 +86,80 @@ def login(
 login(token=SLACK_TOKEN, silent_error=True, update_global=True)
 
 
-def scim(token=None, force_login: bool = False) -> slack_scim.SCIMClient:
+def _generic_client_wrapper(
+        token: typing.Optional[str] = None,
+        force_login: bool = False,
+        update_global: typing.Optional[bool] = None,
+        client_id: int = 0,
+) -> typing.Union[slack_scim.SCIMClient, slack.WebClient]:
+
+    global _slack_client, _slack_scim
+
+    global_clients = [_slack_client, _slack_scim]
+
+    # if no global client exists, instantiate one
     if _slack_scim is None or force_login:
-        login(token=token or SLACK_TOKEN, silent_error=False)
-    return _slack_scim
+
+        # update global by default because default is unset
+        local_clients = login(
+            token=token or SLACK_TOKEN,
+            silent_error=False,
+            update_global=update_global if update_global is not None else True,
+        )
+
+        return local_clients[client_id]
+
+    # here there is already a global client; two decisions to make:
+    # 1. return the global client?
+    # 2. if not, then return something else — update the global client?
+
+    if token is None or token == _slack_scim.token:
+        return global_clients[client_id]
+
+    # do not update global by default because one already exists
+    local_clients = login(
+        token=token or SLACK_TOKEN,
+        silent_error=False,
+        update_global=update_global if update_global is not None else False,
+    )
+
+    return local_clients[client_id]
 
 
-def api(token=None, force_login: bool = False) -> slack.WebClient:
-    if _slack_client is None or force_login:
-        login(token=token or SLACK_TOKEN, silent_error=False)
-    return _slack_client
+def scim(
+        token: typing.Optional[str] = None,
+        force_login: bool = False,
+        update_global: typing.Optional[bool] = None
+) -> slack_scim.SCIMClient:
+
+    return _generic_client_wrapper(
+        token=token,
+        force_login=force_login,
+        update_global=update_global,
+        client_id=_CLIENT_TYPE_SCIM,
+    )
 
 
-def managed_scim(token=None) -> typing.ContextManager[slack_scim.SCIMClient]:
-    return slacktivate.slack.exceptions.SlackExceptionHandler(client=scim(token=token))
+def api(
+        token: typing.Optional[str] = None,
+        force_login: bool = False,
+        update_global: typing.Optional[bool] = None
+) -> slack.WebClient:
+    return _generic_client_wrapper(
+        token=token,
+        force_login=force_login,
+        update_global=update_global,
+        client_id=_CLIENT_TYPE_API,
+    )
 
 
-def managed_api(token=None) -> typing.ContextManager[slack.WebClient]:
-    return slacktivate.slack.exceptions.SlackExceptionHandler(client=api(token=token))
+def managed_scim(token: typing.Optional[str] = None) -> typing.ContextManager[slack_scim.SCIMClient]:
+    return slacktivate.slack.exceptions.SlackExceptionHandler(
+        client=scim(token=token, update_global=False)
+    )
+
+
+def managed_api(token: typing.Optional[str] = None) -> typing.ContextManager[slack.WebClient]:
+    return slacktivate.slack.exceptions.SlackExceptionHandler(
+        client=api(token=token, update_global=False)
+    )
