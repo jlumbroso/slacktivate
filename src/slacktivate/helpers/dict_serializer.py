@@ -75,3 +75,26 @@ def to_flat_dict(obj: typing.Any) -> typing.Dict[str, typing.Any]:
     return dict_to_flat_dict(
         dict_obj=to_dict(obj),
     )
+
+
+def add_missing_dict_fields(
+        list_of_dicts: typing.List[typing.Dict[typing.Any, typing.Any]],
+) -> typing.List[typing.Dict[typing.Any, typing.Any]]:
+
+    fields = list()
+
+    for d in list_of_dicts:
+        for field in d.keys():
+            if field in fields:
+                continue
+            fields.append(field)
+
+    list_of_dicts_with_missing_fields = [
+        {
+            field: d.get(field, "")
+            for field in fields
+        }
+        for d in list_of_dicts
+    ]
+
+    return list_of_dicts_with_missing_fields
