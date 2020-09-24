@@ -8,6 +8,7 @@ import click_help_colors
 import click_spinner
 
 import slacktivate.cli.helpers
+import slacktivate.helpers.dict_serializer
 import slacktivate.input.config
 import slacktivate.input.parsing
 
@@ -32,15 +33,48 @@ def cli(ctx: slacktivate.cli.helpers.AbstractSlacktivateCliContext, token, spec,
 
 
 @cli.group(name="list")
-@click.argument("config", type=click.File('rb'), envvar="SLACKTIVATE_CONFIG", metavar="CONFIG")
 @click.pass_context
 def cli_list(ctx):
     pass
 
-@cli_list.group(name="users")
+
+@cli_list.command(name="users")
+@slacktivate.cli.helpers.cli_arg_spec
+@slacktivate.cli.helpers.cli_opt_output_format
 @click.pass_context
-def list_users(ctx):
-    pass
+def list_users(
+        ctx: slacktivate.cli.helpers.AbstractSlacktivateCliContext,
+        spec: typing.Optional[io.BufferedReader],
+        format: slacktivate.cli.helpers.OutputFormatType,
+):
+    if spec is not None:
+        ctx.obj.set_spec_file(spec_file=spec)
+
+    with click_spinner.spinner(stream=sys.stderr):
+        sc_obj = slacktivate.input.config.SlacktivateConfig.from_specification(
+            config_data=ctx.obj.specification,
+        )
+
+    format = format.lower()
+
+    if format == "term":
+        click.echo("\n".join(list(map(lambda x: "{}".format(x), sc_obj.users.keys()))))
+
+    elif format == "csv":
+
+        # NOTE: fix because comma can't (yet) handle missing fields
+        lst = list(map(slacktivate.helpers.dict_serializer.to_flat_dict, sc_obj.users.values()))
+        lst_ext = slacktivate.helpers.dict_serializer.add_missing_dict_fields(lst)
+
+        import comma
+        click.echo(comma.dumps(lst_ext))
+
+    elif format == "json":
+        import json
+        click.echo(json.dumps(
+            obj=sc_obj.users,
+            indent=4,
+        ))
 
 
 
