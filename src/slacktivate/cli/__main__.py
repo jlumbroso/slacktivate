@@ -23,6 +23,25 @@ except ImportError:
     raise
 
 
+# TODO: implement the following
+#
+# list users
+# list groups
+# list channels
+# users list
+# users deactivate
+# users activate
+# users synchronize
+# groups list
+# groups synchronize
+# channels list
+# channels synchronize
+# channels invite --channel "#126-grading-notifications" --group ta126
+# validate
+
+
+
+
 @slacktivate.cli.helpers.cli_root
 def cli(ctx: slacktivate.cli.helpers.AbstractSlacktivateCliContext, token, spec, dry_run):
     ctx.obj = slacktivate.cli.helpers.SlacktivateCliContextObject(
@@ -35,6 +54,12 @@ def cli(ctx: slacktivate.cli.helpers.AbstractSlacktivateCliContext, token, spec,
 @cli.group(name="list")
 @click.pass_context
 def cli_list(ctx):
+    """
+    Lists any type of object defined in the provided specification SPEC,
+    which includes users, groups and channels. Using the flag "--slack"
+    will provide data on whether the objects have been synchronized with
+    the target Slack workspace.
+    """
     pass
 
 
@@ -47,6 +72,9 @@ def list_users(
         spec: typing.Optional[io.BufferedReader],
         format: slacktivate.cli.helpers.OutputFormatType,
 ):
+    """
+    Provide a list of all the users contained in SPEC.
+    """
     if spec is not None:
         ctx.obj.set_spec_file(spec_file=spec)
 
@@ -75,6 +103,11 @@ def list_users(
             obj=sc_obj.users,
             indent=4,
         ))
+
+
+
+
+
 
 
 
