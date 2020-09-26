@@ -71,9 +71,9 @@ class SlacktivateConfigSection(collections.UserDict):
 
     def __init__(self, value, **kwargs):
         super().__init__(value, **kwargs)
-        self._validate_fields()
+        self._validate_fields(**kwargs)
 
-    def _validate_fields(self):
+    def _validate_fields(self, **kwargs):
 
         # check required fields
         if self._required is not None:
@@ -141,17 +141,45 @@ class UserSourceConfig(SlacktivateConfigSection):
 
     def __init__(self, value):
         super().__init__(value)
+        self._validate_fields(vars=None)
+
+    def _validate_fields(
+            self,
+            vars: typing.Optional[typing.Dict[str, str]] = None,
+            **kwargs,
+    ) -> typing.NoReturn:
+
+        # first validate parent logic
+        super()._validate_fields(vars=vars, **kwargs)
 
         if "file" in self:
-            # "file" could be either a path, or a glob expression;
-            # we raise an exception if the path does not exist and the
-            # expression does not glob
-            if not os.path.exists(self.get("file")) and len(glob.glob(self.get("file"))) == 0:
-                raise UserSourceException(
-                    "configuration file problem: user source '{}' cannot be found\n(pwd: '{}')".format(
-                        self.get("file"),
-                        os.getcwd()),
-                )
+
+            # first determine if we need the 'vars', and only continue if we don't need
+            # it or we need it and it is provided to this function --- yes the condition in
+            # the if is redundant, but intentionally so)
+
+            file_str = self.get("file")
+            file_str_fields = slacktivate.input.helpers.find_jinja2_template_fields(file_str)
+
+            if "vars" not in file_str_fields or ("vars" in file_str_fields and vars is not None):
+
+                if len(file_str_fields) > 0:
+                    file_str = slacktivate.input.helpers.render_jinja2(
+                        jinja2_pattern=file_str,
+                        data=None,
+                        vars=vars,
+                    )
+
+                # next "file" could be either a path, or a glob expression;
+                # we raise an exception if the path does not exist and the
+                # expression does not glob
+
+                if not os.path.exists(file_str) and len(glob.glob(file_str)) == 0:
+                    raise UserSourceException(
+                        "configuration file problem: user source '{}' cannot be found\n(pwd: '{}')".format(
+                            self.get("file"),
+                            os.getcwd()),
+                    )
 
         if "key" in self:
             if not slacktivate.input.helpers.parseable_jinja2(self.get("key")):
@@ -165,11 +193,18 @@ class UserSourceConfig(SlacktivateConfigSection):
             vars: typing.Optional[typing.Dict[str, str]],
     ) -> list:
 
+        # revalidate fields with 'vars' in case the validation of filename was skipped
+        self._validate_fields(vars=vars)
+
         raw_data = None
 
         # getting the data
         if "file" in self:
-            file_str = self.get("file")
+            file_str = slacktivate.input.helpers.render_jinja2(
+                jinja2_pattern=self.get("file"),
+                data=None,
+                vars=vars,
+            )
 
             files = glob.glob(file_str)
 
