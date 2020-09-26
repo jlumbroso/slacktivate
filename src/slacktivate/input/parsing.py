@@ -1,6 +1,7 @@
 
 import collections
 import copy
+import glob
 import fnmatch
 import io
 import itertools
@@ -31,6 +32,13 @@ __all__ = [
 
     "parse_specification",
 ]
+
+
+SLACKTIVATE_SORT_NEWEST = "newest"
+
+SLACKTIVATE_SORT_OLDEST = "oldest"
+
+SLACKTIVATE_DEFAULT_SORT = SLACKTIVATE_SORT_NEWEST
 
 
 class SlacktivateJSONEncoder(json.JSONEncoder):
@@ -128,13 +136,17 @@ class UserSourceConfig(SlacktivateConfigSection):
     # }
 
     _required = ["type", ["file", "contents"]]
-    _optional = ["fields", "key", "filter"]
+    _optional = ["fields", "key", "filter", "sort"]
+    _source_name = None
 
     def __init__(self, value):
         super().__init__(value)
 
         if "file" in self:
-            if not os.path.exists(self.get("file")):
+            # "file" could be either a path, or a glob expression;
+            # we raise an exception if the path does not exist and the
+            # expression does not glob
+            if not os.path.exists(self.get("file")) and len(glob.glob(self.get("file"))) == 0:
                 raise UserSourceException(
                     "configuration file problem: user source '{}' cannot be found\n(pwd: '{}')".format(
                         self.get("file"),
@@ -154,7 +166,28 @@ class UserSourceConfig(SlacktivateConfigSection):
 
         # getting the data
         if "file" in self:
-            raw_data = open(self.get("file")).read()
+            file_str = self.get("file")
+
+            files = glob.glob(file_str)
+
+            # by default, sort is in increasing order of mtime
+            # but if we want newest, we want the largest mtime first,
+            # so that is reverse
+            reverse_sort = (
+                    self.get("sort", SLACKTIVATE_DEFAULT_SORT) == SLACKTIVATE_SORT_NEWEST
+            )
+
+            files.sort(
+                key=os.path.getmtime,
+                reverse=reverse_sort,
+            )
+
+            # guaranteed to exist otherwise we would have raised an exception
+            # above when validating parameters
+            file = files[0]
+            self._source_name = file
+
+            raw_data = open(file).read()
 
         elif "contents" in self:
             raw_data = self.get("contents")
