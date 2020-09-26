@@ -94,20 +94,24 @@ def find_jinja2_template_fields(
 
 def render_jinja2(
         jinja2_pattern: str,
-        data: typing.Optional[typing.Union[list, dict]],
+        data: typing.Optional[typing.Union[list, dict]] = None,
+        vars: typing.Optional[typing.Dict[str, str]] = None,
 ) -> str:
 
+    if vars is None:
+        vars = dict()
+
     if type(data) is None:
-        return jinja2.Template(jinja2_pattern).render()
+        return jinja2.Template(jinja2_pattern).render(vars=vars)
 
     if issubclass(type(data), list) or issubclass(type(data), collections.UserList):
         return jinja2.Template(jinja2_pattern).render(
-            record=data, *data,
+            record=data, vars=vars, *data,
         )
 
     if issubclass(type(data), dict) or issubclass(type(data), collections.UserDict):
         return jinja2.Template(jinja2_pattern).render(
-            record=list(data.values()), **data,
+            record=list(data.values()), vars=vars, **data,
         )
 
 

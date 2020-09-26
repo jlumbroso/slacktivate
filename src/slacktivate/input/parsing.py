@@ -160,7 +160,10 @@ class UserSourceConfig(SlacktivateConfigSection):
                         self.get("file")),
                 )
 
-    def _load(self) -> list:
+    def _load(
+            self,
+            vars: typing.Optional[typing.Dict[str, str]],
+    ) -> list:
 
         raw_data = None
 
@@ -206,7 +209,11 @@ class UserSourceConfig(SlacktivateConfigSection):
 
         return data
 
-    def _post_process(self, value: typing.Union[list, dict]) -> list:
+    def _post_process(
+            self,
+            value: typing.Union[list, dict],
+            vars: typing.Optional[typing.Dict[str, str]],
+    ) -> list:
 
         # the 'key' field is to reindex the database
         if "key" in self and self.get("key") is not None:
@@ -231,6 +238,7 @@ class UserSourceConfig(SlacktivateConfigSection):
                     field_name: slacktivate.input.helpers.render_jinja2(
                         jinja2_pattern=field_pattern,
                         data=record,
+                        vars=vars,
                     )
                     for field_name, field_pattern in self.get("fields").items()
                 }
@@ -259,9 +267,12 @@ class UserSourceConfig(SlacktivateConfigSection):
 
         return value
 
-    def load(self) -> list:
-        data = self._load()
-        data = self._post_process(data)
+    def load(
+            self,
+            vars: typing.Optional[typing.Dict[str, str]],
+    ) -> list:
+        data = self._load(vars=vars)
+        data = self._post_process(data, vars=vars)
         return data
 
 
@@ -285,7 +296,8 @@ class UserGroupConfig(SlacktivateConfigSection):
 
     def compute(
             self,
-            users: typing.Union[list, dict]
+            users: typing.Union[list, dict],
+            vars: typing.Optional[typing.Dict[str, str]],
     ) -> typing.List["UserGroupConfig"]:
 
         target_users = users
@@ -304,6 +316,7 @@ class UserGroupConfig(SlacktivateConfigSection):
             group_name = slacktivate.input.helpers.render_jinja2(
                 jinja2_pattern=self.get("name"),
                 data=user,
+                vars=vars,
             )
 
             subgroup_users[group_name] = subgroup_users.get(group_name, list())
@@ -350,6 +363,7 @@ class ChannelConfig(SlacktivateConfigSection):
             self,
             users: typing.Union[list, dict],
             groups: typing.List[UserGroupConfig],
+            vars: typing.Optional[typing.Dict[str, str]],
     ) -> typing.List["ChannelConfig"]:
 
         target_users = users
@@ -390,6 +404,7 @@ class ChannelConfig(SlacktivateConfigSection):
             channel_name = slacktivate.input.helpers.render_jinja2(
                 jinja2_pattern=self.get("name"),
                 data=user,
+                vars=vars,
             )
 
             subchannel_users[channel_name] = subchannel_users.get(channel_name, list())

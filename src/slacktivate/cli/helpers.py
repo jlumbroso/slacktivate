@@ -6,6 +6,7 @@ import typing
 import click
 import click_help_colors
 
+import slacktivate.__version__
 import slacktivate.input.parsing
 
 
@@ -163,6 +164,8 @@ cli_opt_dry_run = click.option(
     help="Do not actually perform the action."
 )
 
+cli_opt_version = click.version_option(version=slacktivate.__version__)
+
 OutputFormatType = typing.Union[
     typing.Literal["term"],
     typing.Literal["json"],
@@ -179,7 +182,7 @@ cli_opt_output_format = click.option(
 
 cli_root = chain_functions(*[
     cli_root_group_green,
-    cli_opt_token, cli_opt_spec, cli_opt_dry_run,
+    cli_opt_token, cli_opt_spec, cli_opt_dry_run, cli_opt_version,
     click.pass_context,
 ])
 

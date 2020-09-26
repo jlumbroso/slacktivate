@@ -50,10 +50,12 @@ class SlacktivateConfig:
 
         self._config = config_data
 
+        self._vars = self._config.get("vars", dict())
+
         self._users = {}
 
         for userconfig in self._config.get("users"):
-            users = userconfig.load()
+            users = userconfig.load(vars=self._vars)
             self._users.update(slacktivate.input.helpers.reindex_user_data(
                 user_data=users,
             ))
@@ -61,7 +63,10 @@ class SlacktivateConfig:
         self._groups = []
 
         for groupconfig in self._config.get("groups", list()):
-            new_groups = groupconfig.compute(users=self._users)
+            new_groups = groupconfig.compute(
+                users=self._users,
+                vars=self._vars,
+            )
             self._groups += new_groups
 
         self._channels = []
@@ -70,6 +75,7 @@ class SlacktivateConfig:
             new_channels = channelconfig.compute(
                 users=self._users,
                 groups=self._groups,
+                vars=self._vars,
             )
             self._channels += new_channels
 
