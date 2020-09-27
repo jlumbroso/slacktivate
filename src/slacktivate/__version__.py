@@ -1,3 +1,3 @@
 
-__version__ = "0.2.7"
+__version__ = "0.2.8"
 version_info = tuple(int(v) if v.isdigit() else v for v in __version__.split('.'))

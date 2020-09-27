@@ -101,7 +101,7 @@ def render_jinja2(
     if vars is None:
         vars = dict()
 
-    if type(data) is None:
+    if data is None or type(data) is None:
         return jinja2.Template(jinja2_pattern).render(vars=vars)
 
     if issubclass(type(data), list) or issubclass(type(data), collections.UserList):
@@ -180,6 +180,7 @@ def refilter_user_data(
 
     user_data = unindex_data(data=user_data)
 
+    # NOTE: should catch exceptions from Yaql for better error reporting
     engine = yaql.factory.YaqlFactory().create()
     expression = engine(filter_query)
     filtered_user_data = expression.evaluate(data=user_data)

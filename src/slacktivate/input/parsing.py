@@ -121,9 +121,12 @@ class UserSourceException(ValueError):
         super().__init__(*args, **kwargs)
         self._message = message
 
+    def __str__(self):
+        return self.message
+
     @property
     def message(self):
-        return self._message
+        return self._message if self._message is not None else ""
 
 
 class UserSourceConfig(SlacktivateConfigSection):
@@ -175,6 +178,12 @@ class UserSourceConfig(SlacktivateConfigSection):
                 # expression does not glob
 
                 if not os.path.exists(file_str) and len(glob.glob(file_str)) == 0:
+                    print("<<<{}>>>".format(file_str))
+                    print("<<<{}>>>".format(glob.glob(file_str)))
+                    print("<<<{}>>>".format(len(glob.glob(file_str))))
+                    print("configuration file problem: user source '{}' cannot be found\n(pwd: '{}')".format(
+                        self.get("file"),
+                        os.getcwd()))
                     raise UserSourceException(
                         "configuration file problem: user source '{}' cannot be found\n(pwd: '{}')".format(
                             self.get("file"),
@@ -240,7 +249,7 @@ class UserSourceConfig(SlacktivateConfigSection):
             data = yaml.load(raw_data)
 
         elif self.get("type") == "csv":
-            data = comma.load(raw_data)
+            data = list(map(dict, comma.load(raw_data, force_header=True)))
 
         return data
 
@@ -269,14 +278,41 @@ class UserSourceConfig(SlacktivateConfigSection):
         if "fields" in self and self.get("fields") is not None:
 
             def __expand_record(record):
-                new_fields = {
-                    field_name: slacktivate.input.helpers.render_jinja2(
-                        jinja2_pattern=field_pattern,
+                new_fields = {}
+
+                def formatter(pattern):
+                    return slacktivate.input.helpers.render_jinja2(
+                        jinja2_pattern=pattern,
                         data=record,
                         vars=vars,
                     )
-                    for field_name, field_pattern in self.get("fields").items()
-                }
+
+                for field_name, field_pattern in self.get("fields").items():
+
+                    if isinstance(field_pattern, str):
+                        new_fields[field_name] = formatter(field_pattern)
+
+                    elif isinstance(field_pattern, list):
+
+                        # retrieve record's value for this field, if it exists
+                        current_field_value = record.get(field_name, list())
+                        if isinstance(current_field_value, str):
+                            current_field_value = [current_field_value]
+
+                        # format current field patterns:
+                        new_values = list(map(formatter, field_pattern))
+
+                        # assign field
+                        new_fields[field_name] = current_field_value + new_values
+
+                # new_fields = {
+                #     field_name: slacktivate.input.helpers.render_jinja2(
+                #         jinja2_pattern=field_pattern,
+                #         data=record,
+                #         vars=vars,
+                #     )
+                #     for field_name, field_pattern in self.get("fields").items()
+                # }
                 record.update(new_fields)
                 return record
 
