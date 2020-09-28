@@ -1,18 +1,26 @@
 
+import code
 import io
 import os
+import sys
 import typing
 
 import click
 import click_help_colors
+import click_spinner
+import slack
+import slack_scim
 
 import slacktivate.__version__
+import slacktivate.input.config
 import slacktivate.input.parsing
+import slacktivate.slack.clients
 
 
 __author__ = "Jérémie Lumbroso <lumbroso@cs.princeton.edu>"
 
 __all__ = [
+    "launch_repl",
     "chain_functions",
 
     "SlacktivateCliContextObject",
@@ -25,6 +33,53 @@ __all__ = [
 
     "cli_root",
 ]
+
+
+# From: https://medium.com/centrality/building-repls-for-fun-and-profit-597ae4fcdd85
+def launch_repl(
+        local_vars: typing.Optional[typing.Dict[str, typing.Any]] = None,
+        header: typing.Optional[str] = None,
+        footer: typing.Optional[str] = None
+) -> typing.NoReturn:
+
+    no_ipython = True
+    try:
+        import IPython
+        no_ipython = False
+    except ImportError or ModuleNotFoundError:
+        pass
+
+    if no_ipython:
+        import readline
+        import rlcompleter
+        readline.parse_and_bind("tab: complete")
+
+        # thx AnaS Kayed: https://stackoverflow.com/a/63611300/408734
+        readline.parse_and_bind("bind ^I rl_complete")
+
+        new_local_vars = {
+            "readline": readline,
+            "rlcompleter": rlcompleter,
+        }
+        new_local_vars.update(local_vars)
+
+        readline.set_completer(
+            rlcompleter.Completer(new_local_vars).complete
+        )
+
+        code.InteractiveConsole(
+            locals=new_local_vars,
+        ).interact(
+            banner=header,
+            exitmsg=footer,
+        )
+    else:
+        print(header)
+        IPython.start_ipython(
+            argv=[],
+            user_ns=local_vars
+        )
+        print(footer)
 
 
 # From: https://stackoverflow.com/a/58005342/408734
@@ -46,6 +101,8 @@ class SlacktivateCliContextObject:
 
     _dry_run: bool = False
     _slack_token: typing.Optional[str] = None
+    _slack_token_last_used: typing.Optional[str] = None
+    _slacktivate_config: typing.Optional[slacktivate.input.config.SlacktivateConfig] = None
     _spec_file: typing.Optional[io.BufferedReader] = None
     _spec_contents: typing.Optional[str] = None
     _specification: typing.Optional[slacktivate.input.parsing.SlacktivateConfigSection] = None
@@ -61,7 +118,7 @@ class SlacktivateCliContextObject:
             self._dry_run = dry_run
 
         # slack API / scim API token
-        self._slack_token = slack_token if slack_token is not None else os.getenv("SLACK_TOKEN")
+        self._slack_token = slack_token
 
         # configuration file
         if spec_file is not None:
@@ -83,6 +140,61 @@ class SlacktivateCliContextObject:
 
             # flush parsed specification
             self._specification = None
+
+    def activate_dry_run(self):
+        if self._dry_run is None or not self._dry_run:
+            self._dry_run = True
+
+    def compile_specification(self, silent=True, msg=None, **kwargs):
+
+        def do_compile():
+            self._slacktivate_config = slacktivate.input.config.SlacktivateConfig.from_specification(
+                config_data=self.specification,
+            )
+
+        if silent:
+            # no I/O
+            do_compile()
+
+        else:
+            # output to stderr
+            if msg is not None:
+                click.secho(
+                    message=msg,
+                    nl=False,
+                    err=True,
+                    **kwargs,
+                )
+            with click_spinner.spinner(stream=sys.stderr):
+                do_compile()
+
+        return self._slacktivate_config
+
+    def login(self) -> typing.Tuple[slack.WebClient, slack_scim.SCIMClient]:
+        slack_token = self._slack_token
+
+        if self._specification is not None:
+            settings_slack_token = self._specification.get("settings", dict()).get("slack_token")
+            slack_token = slack_token if slack_token is not None else settings_slack_token
+
+        slack_token = slack_token if slack_token is not None else os.getenv("SLACK_TOKEN")
+
+        self._slack_token_last_used = slack_token
+
+        return slacktivate.slack.clients.login(
+            token=self._slack_token_last_used,
+            silent_error=False,
+            update_global=True,
+        )
+
+    @property
+    def config(self) -> slacktivate.input.config.SlacktivateConfig:
+        if self._slacktivate_config is None:
+            self.compile_specification(
+                silent=True,
+                msg=None,
+            )
+        return self._slacktivate_config
 
     @property
     def dry_run(self) -> bool:
