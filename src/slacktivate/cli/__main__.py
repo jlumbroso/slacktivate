@@ -1,11 +1,13 @@
 import os
 import io
 import sys
+import textwrap
 import typing
 
 import click
 import click_help_colors
 import click_spinner
+import jinja2
 
 import slacktivate.cli.helpers
 import slacktivate.helpers.dict_serializer
@@ -49,6 +51,52 @@ def cli(ctx: slacktivate.cli.helpers.AbstractSlacktivateCliContext, token, spec,
         slack_token=token,
         spec_file=spec,
     )
+
+
+@cli.command(name="repl")
+@slacktivate.cli.helpers.cli_arg_spec
+@click.pass_context
+def cli_repl(
+        ctx: slacktivate.cli.helpers.AbstractSlacktivateCliContext,
+        spec: typing.Optional[io.BufferedReader],
+):
+    """
+    A Python REPL with the Slacktivate package, and Slack clients loaded
+    preconfigured. This is convenient for quick and dirty operations.
+    """
+    if spec is not None:
+        ctx.obj.set_spec_file(spec_file=spec)
+
+    ctx.obj.compile_specification()
+
+    client_api, client_scim = ctx.obj.login()
+
+    header = jinja2.Template(textwrap.dedent("""
+        * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        WELCOME TO SLACKTIVATE v{{ version }}---PYTHON v{{ py_version }} REPL.
+        Preloaded object (`help(<obj>)` for documentation; [TAB] for completion):
+        - api / scim: Slack API and SCIM clients
+        - config: Slacktivate configuration file
+        - slacktivate: Slacktivate package
+        * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        """[1:-1])).render(
+        version=slacktivate.__version__,
+        py_version="{}.{}".format(sys.version_info.major, sys.version_info.minor),
+        token=ctx.obj.slack_token)
+
+    footer = "Thanks for using Slacktivate! Please star https://github.com/jlumbroso/slacktivate! ;-)"
+
+    slacktivate.cli.helpers.launch_repl(
+        local_vars={
+            "api":  client_api,
+            "scim": client_scim,
+            "spec": ctx.obj.specification,
+            "config": ctx.obj.config,
+        },
+        header=header,
+        footer=footer,
+    )
+
 
 
 @cli.group(name="list")
@@ -109,6 +157,53 @@ def list_users(
 
 
 
+import slacktivate.macros.provision
+
+@cli.group(name="users")
+@click.pass_context
+def cli_users(ctx):
+    """
+    Sub-command for operations on Slack users (e.g.: activate, deactivate, list, synchronize).
+    """
+    pass
+
+
+@cli_users.command(name="activate")
+@slacktivate.cli.helpers.cli_arg_spec
+@slacktivate.cli.helpers.cli_opt_dry_run
+@click.pass_context
+def users_activate(
+        ctx: slacktivate.cli.helpers.AbstractSlacktivateCliContext,
+        spec: typing.Optional[io.BufferedReader],
+        dry_run: bool,
+):
+    """
+    Provide a list of all the users contained in SPEC.
+    """
+    if spec is not None:
+        ctx.obj.set_spec_file(spec_file=spec)
+
+    if dry_run:
+        ctx.obj.activate_dry_run()
+
+    ctx.obj.compile_specification()
+
+    ctx.obj.login()
+
+    # MAIN EVENT
+    users_created = slacktivate.macros.provision.users_ensure(
+        config=ctx.obj.config,
+        dry_run=ctx.obj.dry_run,
+    )
+
+    print(users_created)
+
+    click.echo("DONE!")
+
+
+
+
+
 
 
 
@@ -162,7 +257,7 @@ def validate(
     click.secho()
     click.secho("Information:", err=True, bold=True)
     click.secho("  Group definitions: {}".format(len(sc.get("groups", list()))), err=True)
-    click.secho("  Channel definitions: {}".format(len(sc.get("groups", list()))), err=True)
+    click.secho("  Channel definitions: {}".format(len(sc.get("channels", list()))), err=True)
     click.secho("  User source:", err=True)
     for source in sc["users"]:
         if "file" in source:

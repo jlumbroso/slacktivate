@@ -52,6 +52,7 @@ def launch_repl(
     if no_ipython:
         import readline
         import rlcompleter
+        import slacktivate
         readline.parse_and_bind("tab: complete")
 
         # thx AnaS Kayed: https://stackoverflow.com/a/63611300/408734
@@ -60,6 +61,7 @@ def launch_repl(
         new_local_vars = {
             "readline": readline,
             "rlcompleter": rlcompleter,
+            "slacktivate": slacktivate,
         }
         new_local_vars.update(local_vars)
 
