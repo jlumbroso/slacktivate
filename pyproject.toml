@@ -43,6 +43,7 @@ click_help_colors = "^0.8"
 click_spinner = "^0.1.10"
 click-option-group = "^0.5.1"
 #loguru = "^0.5.3"
+tqdm = "^4.49.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

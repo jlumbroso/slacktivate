@@ -9,6 +9,7 @@ import click_help_colors
 import click_spinner
 import jinja2
 
+import slacktivate.__version__
 import slacktivate.cli.helpers
 import slacktivate.helpers.dict_serializer
 import slacktivate.input.config

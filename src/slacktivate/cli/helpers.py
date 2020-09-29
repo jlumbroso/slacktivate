@@ -177,11 +177,14 @@ class SlacktivateCliContextObject:
 
         if self._specification is not None:
             settings_slack_token = self._specification.get("settings", dict()).get("slack_token")
-            slack_token = slack_token if slack_token is not None else settings_slack_token
+            slack_token = settings_slack_token if settings_slack_token is not None else slack_token
 
         slack_token = slack_token if slack_token is not None else os.getenv("SLACK_TOKEN")
 
         self._slack_token_last_used = slack_token
+
+        # Update internally
+        os.environ["SLACK_TOKEN"] = self._slack_token_last_used
 
         return slacktivate.slack.clients.login(
             token=self._slack_token_last_used,

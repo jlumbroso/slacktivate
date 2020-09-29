@@ -156,6 +156,7 @@ def users_deactivate(
 def users_ensure(
         config: slacktivate.input.config.SlacktivateConfig,
         dry_run: bool = False,
+        iterator_wrapper: typing.Optional[typing.Callable[[typing.Iterator], typing.Iterator]] = None,
 ) -> typing.Union[typing.Dict[str, typing.Dict[str, typing.Any]], typing.Dict[str, slacktivate.slack.classes.SlackUser]]:
 
     # refresh the user cache
@@ -186,7 +187,11 @@ def users_ensure(
     # create the users
     users_created = {}
 
-    for user_email, user_attributes in users_to_create.items():
+    # default iterator wrapper
+    if iterator_wrapper is None:
+        iterator_wrapper = (lambda x: x)
+
+    for user_email, user_attributes in iterator_wrapper(users_to_create.items()):
 
         # include all attributes because user is freshly created,
         # no risk to overwrite user-modified attributes
@@ -210,6 +215,8 @@ def users_update(
         config: slacktivate.input.config.SlacktivateConfig,
         overwrite_name: typing.Optional[bool] = None,
         overwrite_image: typing.Optional[bool] = None,
+        dry_run: bool = False,
+        iterator_wrapper: typing.Optional[typing.Callable[[typing.Iterator], typing.Iterator]] = None,
 ) -> typing.Dict[str, slacktivate.slack.classes.SlackUser]:
 
     # refresh the user cache
@@ -217,8 +224,18 @@ def users_update(
 
     users_provisioned = {}
 
+    # default iterator wrapper
+    if iterator_wrapper is None:
+        iterator_wrapper = (lambda x: x)
+
+    # NOTE: make the dry run return something
+    if dry_run:
+        return {}
+
+    user_errors = {}
+
     # iterate over all users in config
-    for user_email, user_attributes in config.users.items():
+    for user_email, user_attributes in iterator_wrapper(config.users.items()):
 
         # lookup user in cache that was just refreshed
         user = _lookup_slack_user_by_email(email=user_email)
@@ -251,15 +268,18 @@ def users_update(
         # change name if necessary
 
         if not keep_name:
-            slacktivate.slack.methods.user_patch(
-                user=user,
-                changes=slacktivate.slack.methods.make_user_dictionary(
-                    attributes=user_attributes,
-                    include_naming=True,
-                    include_image=False,
-                    include_fields=False,
+            try:
+                slacktivate.slack.methods.user_patch(
+                    user=user,
+                    changes=slacktivate.slack.methods.make_user_dictionary(
+                        attributes=user_attributes,
+                        include_naming=True,
+                        include_image=False,
+                        include_fields=False,
+                    )
                 )
-            )
+            except Exception as exc:
+                user_errors[user.email] = exc
 
         # change image if necessary
 
@@ -297,7 +317,7 @@ def users_update(
         )
 
         users_provisioned[user_email] = result
-
+    print(user_errors)
     return users_provisioned
 
 
