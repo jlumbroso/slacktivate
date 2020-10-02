@@ -15,6 +15,8 @@ import slacktivate.cli.logo
 import slacktivate.helpers.dict_serializer
 import slacktivate.input.config
 import slacktivate.input.parsing
+import slacktivate.slack.classes
+import slacktivate.slack.methods
 
 
 try:
@@ -96,6 +98,13 @@ def cli_repl(
             "scim": client_scim,
             "spec": ctx.obj.specification,
             "config": ctx.obj.config,
+
+            # helpful symbols to have
+            # NOTE: figure out better way to do this
+            "User": slacktivate.slack.classes.to_slack_user,
+            "Group": slacktivate.slack.classes.to_slack_group,
+
+            "user_patch": slacktivate.slack.methods.user_patch,
         },
         header=header,
         footer=footer,
