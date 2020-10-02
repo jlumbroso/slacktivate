@@ -11,6 +11,7 @@ import jinja2
 
 import slacktivate.__version__
 import slacktivate.cli.helpers
+import slacktivate.cli.logo
 import slacktivate.helpers.dict_serializer
 import slacktivate.input.config
 import slacktivate.input.parsing
@@ -87,6 +88,8 @@ def cli_repl(
 
     footer = "Thanks for using Slacktivate! Please star https://github.com/jlumbroso/slacktivate! ;-)"
 
+    print(slacktivate.cli.logo.SLACK_LOGO_10L)
+    print(slacktivate.cli.logo.SLACKTIVATE_LOGO_6L)
     slacktivate.cli.helpers.launch_repl(
         local_vars={
             "api":  client_api,
