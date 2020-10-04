@@ -35,6 +35,8 @@ __all__ = [
 ]
 
 
+MAX_PAGE_SIZE = 1000
+
 _custom_fields_by_label: typing.Optional[typing.Dict[str, dict]] = None
 
 
@@ -403,3 +405,65 @@ def conversation_member_ids(
     member_ids_list = response.data.get("members")
 
     return member_ids_list
+
+
+def team_access_logs(
+        before: typing.Optional[int] = None,
+        count: typing.Optional[int] = None,
+        user: typing.Optional[slacktivate.slack.classes.SlackGroupTypes] = None,
+        users: typing.Optional[typing.List[slacktivate.slack.classes.SlackGroupTypes]] = None,
+):
+    # preprocess users
+
+    user_filter = None
+
+    if user is not None and users is not None:
+        users = users + [user]
+    elif user is not None and users is None:
+        users = [user]
+
+    if users is not None:
+        users = map(slacktivate.slack.classes.to_slack_user, users)
+        user_filter = list(map(lambda u: u.id, users))
+
+    # gather logs
+    agg_logs = []
+
+    page = 1
+
+    req_count = MAX_PAGE_SIZE
+    if count is not None and count < MAX_PAGE_SIZE:
+        req_count = count
+
+    with slacktivate.slack.clients.managed_api() as client:
+        while True:
+            result = client.team_accessLogs(
+                before=before,
+                count=req_count,
+                page=page,
+            )
+
+            # retrieve logins
+            data = result.get("logins", list())
+
+            if data is None or len(data) == 0:
+                # if there's nothing left to read exit loop
+                break
+
+            # if only interested in records from specific users only keep those
+            # results
+            if user_filter is not None:
+                data = list(filter(lambda login: login["user_id"] in user_filter, data))
+
+            agg_logs += data
+
+            # if we've retrieved as many records as we wanted, exist
+            if count is not None and len(agg_logs) > count:
+                break
+
+            # next page!
+            page += 1
+
+    return agg_logs[:count]
+
+
