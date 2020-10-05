@@ -82,6 +82,7 @@ def cli_repl(
         - api / scim: Slack API and SCIM clients
         - config: Slacktivate configuration file
         - slacktivate: Slacktivate package
+                                                   Made with ❤︎ in Princeton, N.J.
         * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         """[1:-1])).render(
         version=slacktivate.__version__,

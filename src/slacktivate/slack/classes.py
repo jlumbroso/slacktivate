@@ -234,6 +234,10 @@ class SlackUser:
     # *************************************
 
     @property
+    def scim_obj(self) -> slack_scim.User:
+        return self._user
+
+    @property
     def exists(self) -> bool:
         return self._user is not None
 
