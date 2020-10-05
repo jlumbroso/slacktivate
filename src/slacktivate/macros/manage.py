@@ -1,6 +1,7 @@
 
 import datetime
 import enum
+import operator
 import typing
 
 import slacktivate.helpers.photo
@@ -87,8 +88,10 @@ def user_access_count(
     return total_accesses
 
 
-def user_access_earliest(
-        user: slacktivate.slack.classes.SlackUserTypes
+def _user_access_date_field(
+        user: slacktivate.slack.classes.SlackUserTypes,
+        date_field_name: str,
+        comparator: typing.Callable[[int, int], int] = operator.lt,
 ) -> int:
 
     # normalize user
@@ -98,18 +101,34 @@ def user_access_earliest(
         return -1
 
     # process the logins to count total accesses
-    earliest_access = None
+    best_access = None
     for login in user_logins:
-        date_first = login.get("date_first")
-        if date_first is None:
+        date_field_value = login.get(date_field_name)
+        if date_field_value is None:
             continue
-        if earliest_access is None:
-            earliest_access = date_first
+        if best_access is None:
+            best_access = date_field_value
             continue
-        if date_first < earliest_access:
-            earliest_access = date_first
+        if comparator(date_field_value, best_access):
+            best_access = date_field_value
 
-    return earliest_access
+    return best_access
+
+
+def user_access_earliest(user: slacktivate.slack.classes.SlackUserTypes) -> int:
+    return _user_access_date_field(
+        user=user,
+        date_field_name="date_first",
+        comparator=operator.lt,
+    )
+
+
+def user_access_latest(user: slacktivate.slack.classes.SlackUserTypes) -> int:
+    return _user_access_date_field(
+        user=user,
+        date_field_name="date_last",
+        comparator=operator.gt,
+    )
 
 
 # def user_merge(
