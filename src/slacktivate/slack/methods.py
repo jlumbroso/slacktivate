@@ -392,6 +392,7 @@ def channel_create(
         return channel_data.get("id") if return_id else channel_data
 
 
+@slacktivate.slack.retry.slack_retry
 def conversation_member_ids(
         conversation_id: str,
 ) -> typing.List[str]:
@@ -407,6 +408,7 @@ def conversation_member_ids(
     return member_ids_list
 
 
+@slacktivate.slack.retry.slack_retry
 def team_access_logs(
         before: typing.Optional[int] = None,
         count: typing.Optional[int] = None,
