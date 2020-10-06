@@ -15,6 +15,8 @@ import slacktivate.cli.logo
 import slacktivate.helpers.dict_serializer
 import slacktivate.input.config
 import slacktivate.input.parsing
+import slacktivate.macros.manage
+import slacktivate.macros.provision
 import slacktivate.slack.classes
 import slacktivate.slack.methods
 
@@ -106,6 +108,9 @@ def cli_repl(
             "Group": slacktivate.slack.classes.to_slack_group,
 
             "user_patch": slacktivate.slack.methods.user_patch,
+            "user_merge": slacktivate.macros.manage.user_merge,
+            "slacktivate.macros.manage": slacktivate.macros.manage,
+            "slacktivate.macros.provision": slacktivate.macros.provision
         },
         header=header,
         footer=footer,

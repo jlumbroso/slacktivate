@@ -133,92 +133,146 @@ def user_access_latest(user: slacktivate.slack.classes.SlackUserTypes) -> int:
     )
 
 
-# def user_merge(
-#         user_from: slacktivate.slack.classes.SlackUserTypes,
-#         user_to: slacktivate.slack.classes.SlackUserTypes,
-#
-#         merge_account: UserMergeType = None,
-#         merge_username: UserMergeType = None,
-#         merge_primary_email: UserMergeType = None,
-#
-#         username_field: typing.Optional[str] = None,
-# ):
-#     user_from = slacktivate.slack.classes.to_slack_user(user_from)
-#     user_to = slacktivate.slack.classes.to_slack_user(user_to)
-#
-#     # simple cases
-#
-#     if user_from is None:
-#         return user_to
-#
-#     if user_to is None:
-#         return user_from
-#
-#     # merge case
-#
-#     # NOTE: could reimplement this to merge N accounts, with sorting
-#     # and keys, and reverse (but not sure it's worth the trouble:
-#     # What's the use case?)
-#
-#     user_from_count = user_access_count(user_from)
-#     user_from_earliest = user_access_earliest(user_from)
-#     user_from_latest = user_access_latest(user_from)
-#     user_to_count = user_access_count(user_to)
-#     user_to_earliest = user_access_earliest(user_to)
-#     user_to_latest = user_access_latest(user_to)
-#
-#     user_mfl = user_from if user_from_count > user_to_count else user_to
-#     user_lfl = user_from if user_from_count < user_to_count else user_to
-#     user_new = user_from if user_from_earliest < user_to_earliest else user_to
-#     user_old = user_from if user_from_earliest > user_to_earliest else user_to
-#     user_mra = user_from if user_from_latest > user_to_latest else user_to
-#     user_lra = user_from if user_from_latest < user_to_latest else user_to
-#
-#     def _select_user(
-#             flag: UserMergeOptionsType,
-#             default: UserMergeOptionsType = UserMergeOptionsType.KEEP_TO,
-#             reverse: bool = False,
-#     ) -> slacktivate.slack.classes.SlackUser:
-#         if flag is None:
-#             flag = default
-#
-#         reverse_flag_table = {
-#             UserMergeOptionsType.KEEP_FROM:                     UserMergeOptionsType.KEEP_TO,
-#             UserMergeOptionsType.KEEP_TO:                       UserMergeOptionsType.KEEP_FROM,
-#             UserMergeOptionsType.KEEP_MOST_FREQUENT_LOGIN:      UserMergeOptionsType.KEEP_LEAST_FREQUENT_LOGIN,
-#             UserMergeOptionsType.KEEP_LEAST_FREQUENT_LOGIN:     UserMergeOptionsType.KEEP_MOST_FREQUENT_LOGIN,
-#             UserMergeOptionsType.KEEP_NEWEST:                   UserMergeOptionsType.KEEP_OLDEST,
-#             UserMergeOptionsType.KEEP_OLDEST:                   UserMergeOptionsType.KEEP_NEWEST,
-#             UserMergeOptionsType.KEEP_MOST_RECENTLY_ACCESSED:   UserMergeOptionsType.KEEP_LEAST_RECENTLY_ACCESSED,
-#             UserMergeOptionsType.KEEP_LEAST_RECENTLY_ACCESSED:  UserMergeOptionsType.KEEP_MOST_RECENTLY_ACCESSED,
-#         }
-#
-#         if reverse:
-#             flag = reverse_flag_table.get(flag)
-#
-#         translation_table = {
-#             UserMergeOptionsType.KEEP_FROM:                     user_from,
-#             UserMergeOptionsType.KEEP_TO:                       user_to,
-#             UserMergeOptionsType.KEEP_MOST_FREQUENT_LOGIN:      user_mfl,
-#             UserMergeOptionsType.KEEP_LEAST_FREQUENT_LOGIN:     user_lfl,
-#             UserMergeOptionsType.KEEP_NEWEST:                   user_new,
-#             UserMergeOptionsType.KEEP_OLDEST:                   user_old,
-#             UserMergeOptionsType.KEEP_MOST_RECENTLY_ACCESSED:   user_mra,
-#             UserMergeOptionsType.KEEP_LEAST_RECENTLY_ACCESSED:  user_lra,
-#         }
-#
-#         return translation_table.get(flag)
-#
-#     user_id = _select_user(flag=merge_account, default=UserMergeOptionsType.KEEP_TO).id
-#
-#     user_for_naming = _select_user(flag=merge_username, default=UserMergeOptionsType.KEEP_NEWEST)
-#     user_for_primary_email = _select_user(flag=merge_primary_email, default=UserMergeOptionsType.KEEP_NEWEST)
-#
-#     u4nd = user_for_naming.scim_obj.to_dict()
-#
-#     user_dict = {
-#         "name": u4nd.get("name"),
-#         "displayName": u4nd.get("displayName"),
-#         "nickName": u4nd.get("nickName"),
-#         "nickName": u4nd.get("nickName"),
-#     }
+def user_merge(
+        user_from: slacktivate.slack.classes.SlackUserTypes,
+        user_to: slacktivate.slack.classes.SlackUserTypes,
+
+        merge_account: UserMergeType = None,
+        merge_username: UserMergeType = None,
+        merge_primary_email: UserMergeType = None,
+) -> typing.Optional[slacktivate.slack.classes.SlackUser]:
+    user_from = slacktivate.slack.classes.to_slack_user(user_from)
+    user_to = slacktivate.slack.classes.to_slack_user(user_to)
+
+    # simple cases
+
+    if user_from is None:
+        return user_to
+
+    if user_to is None:
+        return user_from
+
+    # merge case
+
+    # NOTE: could reimplement this to merge N accounts, with sorting
+    # and keys, and reverse (but not sure it's worth the trouble:
+    # What's the use case?)
+
+    user_from_count = user_access_count(user_from)
+    user_from_earliest = user_access_earliest(user_from)
+    user_from_latest = user_access_latest(user_from)
+    user_to_count = user_access_count(user_to)
+    user_to_earliest = user_access_earliest(user_to)
+    user_to_latest = user_access_latest(user_to)
+
+    user_mfl = user_from if user_from_count > user_to_count else user_to
+    user_lfl = user_from if user_from_count < user_to_count else user_to
+    user_new = user_from if user_from_earliest > user_to_earliest else user_to
+    user_old = user_from if user_from_earliest < user_to_earliest else user_to
+    user_mra = user_from if user_from_latest > user_to_latest else user_to
+    user_lra = user_from if user_from_latest < user_to_latest else user_to
+
+    def _select_user(
+            flag: UserMergeOptionsType,
+            default: UserMergeOptionsType = UserMergeOptionsType.KEEP_TO,
+            reverse: bool = False,
+    ) -> slacktivate.slack.classes.SlackUser:
+        if flag is None:
+            flag = default
+
+        reverse_flag_table = {
+            UserMergeOptionsType.KEEP_FROM:                     UserMergeOptionsType.KEEP_TO,
+            UserMergeOptionsType.KEEP_TO:                       UserMergeOptionsType.KEEP_FROM,
+            UserMergeOptionsType.KEEP_MOST_FREQUENT_LOGIN:      UserMergeOptionsType.KEEP_LEAST_FREQUENT_LOGIN,
+            UserMergeOptionsType.KEEP_LEAST_FREQUENT_LOGIN:     UserMergeOptionsType.KEEP_MOST_FREQUENT_LOGIN,
+            UserMergeOptionsType.KEEP_NEWEST:                   UserMergeOptionsType.KEEP_OLDEST,
+            UserMergeOptionsType.KEEP_OLDEST:                   UserMergeOptionsType.KEEP_NEWEST,
+            UserMergeOptionsType.KEEP_MOST_RECENTLY_ACCESSED:   UserMergeOptionsType.KEEP_LEAST_RECENTLY_ACCESSED,
+            UserMergeOptionsType.KEEP_LEAST_RECENTLY_ACCESSED:  UserMergeOptionsType.KEEP_MOST_RECENTLY_ACCESSED,
+        }
+
+        if reverse:
+            flag = reverse_flag_table.get(flag)
+
+        translation_table = {
+            UserMergeOptionsType.KEEP_FROM:                     user_from,
+            UserMergeOptionsType.KEEP_TO:                       user_to,
+            UserMergeOptionsType.KEEP_MOST_FREQUENT_LOGIN:      user_mfl,
+            UserMergeOptionsType.KEEP_LEAST_FREQUENT_LOGIN:     user_lfl,
+            UserMergeOptionsType.KEEP_NEWEST:                   user_new,
+            UserMergeOptionsType.KEEP_OLDEST:                   user_old,
+            UserMergeOptionsType.KEEP_MOST_RECENTLY_ACCESSED:   user_mra,
+            UserMergeOptionsType.KEEP_LEAST_RECENTLY_ACCESSED:  user_lra,
+        }
+
+        return translation_table.get(flag)
+
+    # determine the user account to keep, and the one to deactivate
+    user_to_keep = _select_user(flag=merge_account, default=UserMergeOptionsType.KEEP_OLDEST)
+    user_to_dump = _select_user(flag=merge_account, default=UserMergeOptionsType.KEEP_OLDEST, reverse=True)
+
+    # determine the user account from which to take username
+    user_for_naming = _select_user(flag=merge_username, default=UserMergeOptionsType.KEEP_NEWEST)
+
+    # determine the user account for primary email, and other
+    user_for_primary_email = _select_user(flag=merge_primary_email, default=UserMergeOptionsType.KEEP_NEWEST)
+    user_for_other_email = _select_user(flag=merge_primary_email, default=UserMergeOptionsType.KEEP_NEWEST, reverse=True)
+
+    # recombine emails and build payload (yes, messy, please submit PR or issue to improve!)
+
+    up_emails = user_for_primary_email.scim_obj.to_dict().get("emails", list())
+    uo_emails = user_for_other_email.scim_obj.to_dict().get("emails", list())
+    emails = up_emails + uo_emails
+    for i in range(len(emails)):
+        if emails[i].get("value") == user_for_primary_email.email:
+            emails[i]["primary"] = True
+        else:
+            emails[i]["primary"] = False
+
+    def _get_name(user_dict, field_name=None):
+        fields = ["displayName", "userName", "nickName"]
+        if field_name is not None:
+            fields = [field_name] + fields
+        for field_name in fields:
+            value = user_dict.get(field_name)
+            if value is not None:
+                return value
+
+    # build payload of new user
+
+    u4nd = user_for_naming.scim_obj.to_dict()
+    u2kd_patch = {
+        "active": True,
+        "emails": emails,
+        "displayName": _get_name(user_dict=u4nd, field_name="displayName"),
+        "userName": _get_name(user_dict=u4nd, field_name="userName"),
+        "nickName": _get_name(user_dict=u4nd, field_name="nickName"),
+        "name": u4nd.get("name"),
+    }
+
+    # deactivate user
+
+    u2dd = user_to_dump.scim_obj.to_dict()
+    u2dd_patch = {
+        "active": False,
+        "emails": [{"value": user_for_primary_email.email.replace("@", "+deactivated@"), "primary": True}],
+        "displayName": "deactivated.{}".format(_get_name(user_dict=u2dd, field_name="displayName")),
+        "userName": "deactivated.{}".format(_get_name(user_dict=u2dd, field_name="userName")),
+        "nickName": "deactivated.{}".format(_get_name(user_dict=u2dd, field_name="nickName")),
+    }
+
+    # actually run the operations! (yikes!!! :-)
+
+    # first the user to deactivate, so that we don't have an email conflict
+    slacktivate.slack.methods.user_patch(
+        user=user_to_dump.id,
+        changes=u2dd_patch,
+    )
+
+    result = slacktivate.slack.methods.user_patch(
+        user=user_to_keep.id,
+        changes=u2kd_patch,
+    )
+
+    return result
+
