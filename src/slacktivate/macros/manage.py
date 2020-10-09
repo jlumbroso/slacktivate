@@ -253,12 +253,13 @@ def user_merge(
     # deactivate user
 
     u2dd = user_to_dump.scim_obj.to_dict()
+    deactivated_name = "_{}".format(user_to_dump.id)
     u2dd_patch = {
         "active": False,
         "emails": [{"value": user_for_primary_email.email.replace("@", "+deactivated@"), "primary": True}],
-        "displayName": "deactivated.{}".format(_get_name(user_dict=u2dd, field_name="displayName")),
-        "userName": "deactivated.{}".format(_get_name(user_dict=u2dd, field_name="userName")),
-        "nickName": "deactivated.{}".format(_get_name(user_dict=u2dd, field_name="nickName")),
+        "displayName": deactivated_name,
+        "userName": deactivated_name,
+        "nickName": deactivated_name,
     }
 
     # actually run the operations! (yikes!!! :-)
