@@ -33,6 +33,7 @@ __all__ = [
 
 _SLACK_PHOTOS_FIELD = "photos"
 _SLACK_DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
+_SLACK_FULLNAME_PATTERN = "{givenName} {familyName}"  # Western bias, sorry -_-
 
 
 def _escape_filter_param(s):
@@ -230,6 +231,11 @@ class SlackUser:
     def email(self) -> typing.Optional[str]:
         if self._user is not None:
             return self._user.emails[0].value
+
+    @property
+    def fullname(self) -> typing.Optional[str]:
+        if self._user is not None:
+            return _SLACK_FULLNAME_PATTERN.format(**self._user.name.to_dict())
 
     # *************************************
 

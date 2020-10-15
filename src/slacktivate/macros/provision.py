@@ -48,10 +48,11 @@ def _refresh_users_cache() -> typing.NoReturn:
 
 
 def _lookup_slack_user_by_email(
-        email: str
+        email: str,
+        refresh: typing.Optional[bool] = None,
 ) -> typing.Optional[slacktivate.slack.classes.SlackUser]:
 
-    if _users_cache_by_email is None:
+    if _users_cache_by_email is None or (refresh is not None and refresh):
         _refresh_users_cache()
 
     email = email.lower()
@@ -62,19 +63,24 @@ def _lookup_slack_user_by_email(
 
 
 def _lookup_slack_user_id_by_email(
-        email: str
+        email: str,
+        refresh: typing.Optional[bool] = None,
 ) -> typing.Optional[str]:
 
-    user = _lookup_slack_user_by_email(email=email)
+    user = _lookup_slack_user_by_email(
+        email=email,
+        refresh=refresh,
+    )
     if user is not None:
         return user.id
 
 
 def _lookup_slack_user_by_id(
-        user_id: str
+        user_id: str,
+        refresh: typing.Optional[bool] = None,
 ) -> typing.Optional[slacktivate.slack.classes.SlackUser]:
 
-    if _users_cache_by_id is None:
+    if _users_cache_by_id is None or (refresh is not None and refresh):
         _refresh_users_cache()
 
     result = _users_cache_by_id.get(user_id)
@@ -82,25 +88,89 @@ def _lookup_slack_user_by_id(
     return result
 
 
-def _iterate_emails() -> typing.KeysView[str]:
-    if _users_cache_by_email is None:
+def _iterate_emails(
+        refresh: typing.Optional[bool] = None
+) -> typing.KeysView[str]:
+    if _users_cache_by_email is None or (refresh is not None and refresh):
         _refresh_users_cache()
 
     return _users_cache_by_email.keys()
 
 
-def _iterate_email_and_user() -> typing.ItemsView[str, slacktivate.slack.classes.SlackUser]:
-    if _users_cache_by_email is None:
+def _iterate_email_and_user(
+        refresh: typing.Optional[bool] = None
+) -> typing.ItemsView[str, slacktivate.slack.classes.SlackUser]:
+    if _users_cache_by_email is None or (refresh is not None and refresh):
         _refresh_users_cache()
 
     return _users_cache_by_email.items()
 
 
-def _iterate_user_id_and_user() -> typing.ItemsView[str, slacktivate.slack.classes.SlackUser]:
-    if _users_cache_by_id is None:
+def _iterate_user_id_and_user(
+        refresh: typing.Optional[bool] = None
+) -> typing.ItemsView[str, slacktivate.slack.classes.SlackUser]:
+    if _users_cache_by_id is None or (refresh is not None and refresh):
         _refresh_users_cache()
 
     return _users_cache_by_id.items()
+
+
+def users_iterate(
+        only_active: typing.Optional[bool] = True,
+        only_email: bool = False,
+        no_bots: bool = True,
+        refresh: typing.Optional[bool] = None,
+) -> typing.Union[
+    typing.KeysView[str],
+    typing.ItemsView[str, slacktivate.slack.classes.SlackUser]
+]:
+    iterator = _iterate_email_and_user(refresh=refresh)
+
+    if no_bots:
+        iterator = filter(
+            lambda email_user_pair: SLACK_BOTS_DOMAIN not in email_user_pair[0],
+            iterator,
+        )
+
+    if only_active:
+        iterator = filter(
+            lambda email_user_pair: email_user_pair[1].scim_obj.to_dict().get("active", False),
+            iterator,
+        )
+
+    if only_email:
+        iterator = map(
+            lambda email_user_pair: email_user_pair[0],
+            iterator,
+        )
+
+    return iterator
+
+
+def users_list(
+        only_active: typing.Optional[bool] = True,
+        only_email: bool = False,
+        no_bots: bool = True,
+        as_dict: typing.Optional[bool] = None,
+        refresh: typing.Optional[bool] = None,
+) -> typing.Union[
+    typing.List[str],
+    typing.List[typing.Tuple[str, slacktivate.slack.classes.SlackUser]],
+    typing.Dict[str, slacktivate.slack.classes.SlackUser],
+]:
+    iterator = users_iterate(
+        only_active=only_active,
+        only_email=only_email,
+        no_bots=no_bots,
+        refresh=refresh,
+    )
+
+    ret = list(iterator)
+
+    if as_dict is not None and as_dict and not only_email:
+        ret = dict(ret)
+
+    return ret
 
 
 def users_deactivate(
