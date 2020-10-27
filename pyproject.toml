@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "slacktivate"
-version = "0.2.9"
+version = "0.2.10"
 description = "Slacktivate is a Python library and Command-Line Interface to assist in the provisioning of a Slack workspace."
 authors = ["Jérémie Lumbroso <lumbroso@cs.princeton.edu>"]
 license = "LGPL-3.0-or-later"
@@ -25,6 +25,20 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Office/Business",
 ]
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+isolated_build = true
+envlist = py{38,39}
+
+[testenv]
+requires =
+    tox-poetry-dev-dependencies
+poetry_add_dev_dependencies = True
+commands =
+    pytest
+"""
 
 [tool.poetry.dependencies]
 python = "^3.8"
@@ -53,6 +67,12 @@ sphinx-rtd-theme = "^0.5.0"
 pytest-cov = "^2.10.1"
 codecov = "^2.1.10"
 doc8 = {version = "^0.8.1", optional = true}
+pytest-mock = "^3.3.1"
+requests-mock = "^1.8.0"
+pytest-subtests = "^0.3.2"
+pytest-repeat = "^0.8.0"
+tox = "^3.20.1"
+tox-poetry-dev-dependencies = "^0.0.5"
 
 [tool.poetry.scripts]
 slacktivate = "slacktivate.cli.__main__:main"
