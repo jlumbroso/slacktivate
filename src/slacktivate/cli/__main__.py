@@ -113,6 +113,7 @@ def cli_repl(
             "slacktivate.macros.provision": slacktivate.macros.provision,
 
             "users_list": slacktivate.macros.provision.users_list,
+            "users_deactivate": slacktivate.macros.provision.users_deactivate,
         },
         header=header,
         footer=footer,

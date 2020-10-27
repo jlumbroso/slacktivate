@@ -47,6 +47,11 @@ tqdm = "^4.49.0"                # MPL 2.0 License (as of 2020-09-29)
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"                 # MIT License (as of 2020-09-29)
+sphinx = "^3.2.1"
+sphinx-autodoc-typehints = "^1.11.1"
+sphinx-rtd-theme = "^0.5.0"
+pytest-cov = "^2.10.1"
+codecov = "^2.1.10"
 
 [tool.poetry.scripts]
 slacktivate = "slacktivate.cli.__main__:main"
