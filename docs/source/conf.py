@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath("../.."))
 # -- Project information -----------------------------------------------------
 
 project = "slacktivate"
-copyright = "2019–{}, Jérémie Lumbroso".format(datetime.datetime.now().year)
+copyright = "2020–{}, Jérémie Lumbroso".format(datetime.datetime.now().year).replace("2020–2020", "2020")
 author = "Jérémie Lumbroso"
 
 # The version info for the project you're documenting, acts as replacement for
