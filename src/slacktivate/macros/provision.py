@@ -11,6 +11,7 @@ import slacktivate.slack.methods
 __author__ = "Jérémie Lumbroso <lumbroso@cs.princeton.edu>"
 
 __all__ = [
+    "users_iterate",
     "users_deactivate",
     "users_ensure",
     "users_update",
@@ -116,7 +117,7 @@ def _iterate_user_id_and_user(
 
 
 def users_iterate(
-        only_active: typing.Optional[bool] = True,
+        only_active: bool = True,
         only_email: bool = False,
         no_bots: bool = True,
         refresh: typing.Optional[bool] = None,
@@ -124,6 +125,21 @@ def users_iterate(
     typing.KeysView[str],
     typing.ItemsView[str, slacktivate.slack.classes.SlackUser]
 ]:
+    """
+    Returns an iterator over the existing users in the Slack workspace.
+
+    :param only_active: Flag to only return active users
+    :param only_email: Flag to only iterate over emails, not `(email, user)` pairs
+    :param no_bots: Flag to filter out bot users
+    :param refresh: Flag to force a refresh of the cache
+
+    :return: An iterator over the existing users in the Slack workspace,
+        either over a sequence of `str` representing emails (if `only_email`
+        is set to `True`) or a pair of `str` and
+        :py:class:`slacktivate.slack.classes.SlackUser` representing,
+        respectively, the primary email and the user object.
+    """
+
     iterator = _iterate_email_and_user(refresh=refresh)
 
     if no_bots:
