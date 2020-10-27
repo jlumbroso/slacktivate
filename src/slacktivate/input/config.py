@@ -1,5 +1,6 @@
 
 import copy
+import os
 import io
 import typing
 
@@ -54,8 +55,30 @@ class SlacktivateConfig:
 
         self._users = {}
 
+        self._alternate_emails = {}
+
+        if "alternate_emails" in self._config.get("settings", dict()):
+
+            lines = None
+
+            alternate_emails_src = self._config.get("settings").get("alternate_emails")
+            if os.path.exists(alternate_emails_src):
+                lines = open(alternate_emails_src).read().strip().splitlines(keepends=False)
+            elif "\n" in alternate_emails_src:
+                lines = alternate_emails_src.strip().splitlines()
+
+            if lines is not None:
+                lst_of_emails = list(map(lambda s: s.split(","), lines))
+                dict_of_emails = {
+                    email: email_row
+                    for email_row in lst_of_emails
+                    for email in email_row
+                }
+                self._alternate_emails = dict_of_emails
+
         for userconfig in self._config.get("users"):
-            users = userconfig.load(vars=self._vars)
+            userconfig = typing.cast(slacktivate.input.parsing.UserSourceConfig, userconfig)
+            users = userconfig.load(vars=self._vars, alternate_emails=self._alternate_emails)
             self._users.update(slacktivate.input.helpers.reindex_user_data(
                 user_data=users,
             ))

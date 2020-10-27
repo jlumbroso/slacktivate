@@ -40,6 +40,11 @@ SLACKTIVATE_SORT_OLDEST = "oldest"
 
 SLACKTIVATE_DEFAULT_SORT = SLACKTIVATE_SORT_NEWEST
 
+DEFAULT_EMAIL_INDEX = 0
+
+EMAIL_FIELD_NAME = "email"  # used only for alternate_emails feature
+ALTERNATE_EMAIL_FIELD_NAME = "alternate_emails"
+
 
 class SlacktivateJSONEncoder(json.JSONEncoder):
 
@@ -178,12 +183,13 @@ class UserSourceConfig(SlacktivateConfigSection):
                 # expression does not glob
 
                 if not os.path.exists(file_str) and len(glob.glob(file_str)) == 0:
-                    print("<<<{}>>>".format(file_str))
-                    print("<<<{}>>>".format(glob.glob(file_str)))
-                    print("<<<{}>>>".format(len(glob.glob(file_str))))
-                    print("configuration file problem: user source '{}' cannot be found\n(pwd: '{}')".format(
-                        self.get("file"),
-                        os.getcwd()))
+                    # looks like debug code right??
+                    # print("<<<{}>>>".format(file_str))
+                    # print("<<<{}>>>".format(glob.glob(file_str)))
+                    # print("<<<{}>>>".format(len(glob.glob(file_str))))
+                    # print("configuration file problem: user source '{}' cannot be found\n(pwd: '{}')".format(
+                    #     self.get("file"),
+                    #     os.getcwd()))
                     raise UserSourceException(
                         "configuration file problem: user source '{}' cannot be found\n(pwd: '{}')".format(
                             self.get("file"),
@@ -221,7 +227,7 @@ class UserSourceConfig(SlacktivateConfigSection):
             # but if we want newest, we want the largest mtime first,
             # so that is reverse
             reverse_sort = (
-                    self.get("sort", SLACKTIVATE_DEFAULT_SORT) == SLACKTIVATE_SORT_NEWEST
+                self.get("sort", SLACKTIVATE_DEFAULT_SORT) == SLACKTIVATE_SORT_NEWEST
             )
 
             files.sort(
@@ -255,9 +261,41 @@ class UserSourceConfig(SlacktivateConfigSection):
 
     def _post_process(
             self,
-            value: typing.Union[list, dict],
+            data: typing.Union[list, dict],
             vars: typing.Optional[typing.Dict[str, str]],
+            alternate_emails: typing.Optional[typing.Dict[str, typing.List[str]]] = None,
     ) -> list:
+
+        if alternate_emails is not None:
+            # this is a feature to make sure that, when a user is known
+            # with an alias, that alias can be prioritized (or deprioritized)
+            # centrally through the `alternate_emails` mechanisms
+            # { ...
+            #     "user1@domain.com": ["user1@domain.com", "user1.alias@domain.com"],
+            # ... }
+            # => replace emails
+            for user_row in data:
+                # only place where EMAIL_FIELD_NAME is needed
+                email = user_row.get(EMAIL_FIELD_NAME)
+                if email is None:
+                    continue
+
+                ae_lookup = alternate_emails.get(email)
+                ae_lookup = ae_lookup or alternate_emails.get(email.lower())
+                if ae_lookup is None:
+                    continue
+
+                # shouldn't happen but let's see
+                if type(ae_lookup) is str:
+                    ae_lookup = [ae_lookup]
+
+                # ae_lookup should be a list
+                if email not in ae_lookup:
+                    ae_lookup += [email]
+
+                user_row[EMAIL_FIELD_NAME] = ae_lookup[DEFAULT_EMAIL_INDEX]
+                user_row[ALTERNATE_EMAIL_FIELD_NAME] = ae_lookup
+
 
         # the 'key' field is to reindex the database
         if "key" in self and self.get("key") is not None:
@@ -265,13 +303,13 @@ class UserSourceConfig(SlacktivateConfigSection):
             key_pattern = self.get("key")
 
             # reindex data
-            value = slacktivate.input.helpers.reindex_user_data(
-                user_data=value,
+            data = slacktivate.input.helpers.reindex_user_data(
+                user_data=data,
                 key=key_pattern,
             )
 
             # store the key
-            for record in value.values():
+            for record in data.values():
                 record["key"] = key_pattern
 
         # create additional programmable fields
@@ -316,34 +354,35 @@ class UserSourceConfig(SlacktivateConfigSection):
                 record.update(new_fields)
                 return record
 
-            if issubclass(type(value), list) or issubclass(type(value), collections.UserList):
-                value = [
+            if issubclass(type(data), list) or issubclass(type(data), collections.UserList):
+                data = [
                     __expand_record(record)
-                    for record in value
+                    for record in data
                 ]
 
-            if issubclass(type(value), dict) or issubclass(type(value), collections.UserDict):
-                value = {
+            if issubclass(type(data), dict) or issubclass(type(data), collections.UserDict):
+                data = {
                     key: __expand_record(record)
-                    for key, record in value.items()
+                    for key, record in data.items()
                 }
 
         # refilter data
         if "filter" in self and self.get("fields") is not None:
-            value = slacktivate.input.helpers.refilter_user_data(
-                user_data=value,
+            data = slacktivate.input.helpers.refilter_user_data(
+                user_data=data,
                 filter_query=self.get("filter"),
                 reindex=self.get("key") is not None,
             )
 
-        return value
+        return data
 
     def load(
             self,
             vars: typing.Optional[typing.Dict[str, str]],
+            alternate_emails: typing.Optional[typing.Dict[str, typing.List[str]]] = None,
     ) -> list:
         data = self._load(vars=vars)
-        data = self._post_process(data, vars=vars)
+        data = self._post_process(data, vars=vars, alternate_emails=alternate_emails)
         return data
 
 
