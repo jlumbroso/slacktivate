@@ -1,0 +1,34 @@
+
+on: ["push", "pull_request"]
+
+name: Running tests with pytest in Python 3.8
+jobs:
+  pytest:
+    name: pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+
+      - name: Setup Python & Poetry and install project
+        uses: abatilo/actions-poetry@v1.5.0
+        with:
+          python_version: 3.8.0
+          poetry_version: 1.0
+          working_directory: "."  # optional, defaults to ".'
+          args: install
+
+      - name: Run pytest
+        uses: abatilo/actions-poetry@v1.5.0
+        with:
+          python_version: 3.8.0
+          poetry_version: 1.0
+          working_directory: "."
+          args: run python -m pytest --cov=slacktivate --cov-branch tests/
+
+      - name: Run codecov to upload report to site
+        uses: abatilo/actions-poetry@v1.5.0
+        with:
+          python_version: 3.8.0
+          poetry_version: 1.0
+          working_directory: "."
+          args: run codecov -t ${{ secrets.CODECOV_TOKEN }}
