@@ -1,4 +1,10 @@
 
+"""
+This submodule provides a commong abstraction layer over the heterogeneous
+object types provided by the Slack API client and the Slack SCIM client
+modules.
+"""
+
 import datetime
 import typing
 
@@ -36,21 +42,66 @@ _SLACK_DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
 _SLACK_FULLNAME_PATTERN = "{givenName} {familyName}"  # Western bias, sorry -_-
 
 
-def _escape_filter_param(s):
+# type variable
+_alpha = typing.TypeVar("_alpha")
+
+
+def _escape_filter_param(s: str) -> str:
+    """
+    Ensures there are no single quotes in the filter string, to be used internally
+    when doing a SCIM query with user-provided parameters (to avoid injection).
+
+    :param s: A string from which to remove single-quote characters
+
+    :return: The string :py:data:`s` without single-quote characters
+    """
     if s is None:
         return ""
     return s.replace("'", "")
 
 
-def _first_or_none(lst: typing.Optional[typing.List[typing.Any]]) -> typing.Any:
-    if lst is None or len(lst) == 0:
+def _first_or_none(lst: typing.Union[None, typing.List[_alpha], typing.Iterable[_alpha]]) -> typing.Optional[_alpha]:
+    """
+    Returns the first element of a list-like or iterable value :py:data:`lst`, or `None`
+    if the value is `None` or not a list.
+
+    :param lst: A list-like or iterable value or ``None``
+    :type lst: Optional[List[_alpha]]
+
+    :return: The first element if it can be extracted, otherwise ``None``
+    """
+
+    # let's try as a list-like object first
+    try:
+        if lst is None or len(lst) == 0:
+            return
+        return lst[0]
+    except TypeError:
+        # - will be thrown if len(X) on an object that can't provide a length
+        # - will be thrown if X[0] on an object that can't be subscripted
+        pass
+
+    # let's try as an iterator
+    try:
+        for item in lst:
+            return item
+    except TypeError:
+        # - will throw an exception if X is not iterable
         return
-    return lst[0]
 
 
 def _scim_resource_to_scim_user(
         resource: slack_scim.v1.users.Resource
 ) -> slack_scim.v1.user.User:
+    """
+    Returns a ```User`` object from a ``Resource`` object (that is known
+    to be correspond to a user), both from the :py:mod:`slack_scim` package,
+    using those objects' own internal methods
+
+    :param resource: The :py:class:`slack_scim.v1.users.Resource` object known to be a user
+    :return: A :py:class:`slack_scim.v1.user.User` object
+    """
+
     if resource is not None:
         return slack_scim.v1.user.User.from_dict(
             resource.to_dict()
@@ -60,6 +111,15 @@ def _scim_resource_to_scim_user(
 def _scim_resource_to_scim_group(
         resource: slack_scim.v1.users.Resource
 ) -> slack_scim.v1.users.Group:
+    """
+    Returns a ```Group`` object from a ``Resource`` object (that is known
+    to be correspond to a group), both from the :py:mod:`slack_scim` package,
+    using those objects' own internal methods
+
+    :param resource: The :py:class:`slack_scim.v1.users.Resource` object known to be a group
+    :return: A :py:class:`slack_scim.v1.user.Group` object
+    """
+
     if resource is not None:
         return slack_scim.v1.users.Group.from_dict(
             resource.to_dict()
@@ -71,6 +131,16 @@ def _scim_resource_to_scim_group(
 
 @slacktivate.slack.retry.slack_retry
 def lookup_user_by_id(user_id: str) -> typing.Optional[slack_scim.User]:
+    """
+    Returns the internal :py:class:`slack_scim.User` object for a Slack user
+    in the currently logged-in workspace, given that user's Slack ID; if the
+    Slack user ID does not correspond to an existing user, returns :py:data:`None`.
+    This query is live.
+
+    :param user_id: A Slack user ID
+    :return: A :py:class:`slack_scim.User` object or :py:data:`None`
+    """
+
     try:
         result = slacktivate.slack.clients.scim().read_user(user_id)
     except slack_scim.SCIMApiError as err:
@@ -85,11 +155,21 @@ def lookup_user_by_id(user_id: str) -> typing.Optional[slack_scim.User]:
 
 @slacktivate.slack.retry.slack_retry
 def lookup_user_by_username(username: str) -> typing.Optional[slack_scim.User]:
+    """
+    Returns the internal :py:class:`slack_scim.User` object for a Slack user
+    in the currently logged-in workspace, given that user's `username`; if the
+    username does not correspond to an existing user, returns :py:data:`None`.
+    This query is live.
+
+    :param username: A Slack username
+    :return: A :py:class:`slack_scim.User` object or :py:data:`None`
+    """
+
     username = _escape_filter_param(username)
 
     # https://api.slack.com/scim#filter
     try:
-        result = slacktivate.slack.clients.scim().search_users(
+        results = slacktivate.slack.clients.scim().search_users(
             filter="username eq '{}'".format(username),
             count=1
         ).resources
@@ -100,16 +180,27 @@ def lookup_user_by_username(username: str) -> typing.Optional[slack_scim.User]:
         # propagate error (if rate limiting, will be caught by decorator)
         raise
 
-    return _first_or_none(result)
+    # because of the `eq` there shouldn't be more than one result
+    return _first_or_none(results)
 
 
 @slacktivate.slack.retry.slack_retry
 def lookup_user_by_email(email: str) -> typing.Optional[slack_scim.User]:
+    """
+    Returns the internal :py:class:`slack_scim.User` object for a Slack user
+    in the currently logged-in workspace, given **one** of that user's emails;
+    if the email does not correspond to an existing user, returns :py:data:`None`.
+    This query is live.
+
+    :param email: An email address
+    :return: A :py:class:`slack_scim.User` object or :py:data:`None`
+    """
+
     email = _escape_filter_param(email)
 
     # https://api.slack.com/scim#filter
     try:
-        result = slacktivate.slack.clients.scim().search_users(
+        results = slacktivate.slack.clients.scim().search_users(
             filter="email eq '{}'".format(email),
             count=1
         ).resources
@@ -120,10 +211,16 @@ def lookup_user_by_email(email: str) -> typing.Optional[slack_scim.User]:
         # propagate error (if rate limiting, will be caught by decorator)
         raise
 
-    return _first_or_none(result)
+    # because of the `eq` there shouldn't be more than one result
+    return _first_or_none(results)
 
 
 class SlackUser:
+    """
+    This is a wrapper class to abstract the concept of Slack user across
+    the various vendor-provided packages
+
+    """
 
     _user: typing.Optional[slack_scim.User] = None
 
@@ -140,6 +237,15 @@ class SlackUser:
             user: typing.Optional[slack_scim.User] = None,
             resource: typing.Optional[slack_scim.v1.users.Resource] = None,
     ):
+        """
+        Instantiates
+
+        :param user_id:
+        :param username:
+        :param email:
+        :param user:
+        :param resource:
+        """
         self._provided_username = username
         self._provided_email = email
 
@@ -176,22 +282,88 @@ class SlackUser:
 
     @classmethod
     def from_id(cls, user_id: str) -> "SlackUser":
+        """
+        Creates a :py:class:`SlackUser` wrapper object, given a **Slack user ID**.
+
+        .. note::
+            This is an internal package method that does not do any validation,
+            and can result in :py:class:`SlackUser` representing non-existent
+            users. Use the higher-level :py:func:`to_slack_user` method to do
+            user validation.
+
+        :param user_id: A Slack user ID
+        :return: A :py:class:`SlackUser` object
+        """
+
         return cls(user_id=user_id)
 
     @classmethod
     def from_username(cls, username: str) -> "SlackUser":
+        """
+        Creates a :py:class:`SlackUser` wrapper object, given a **Slack username**.
+
+        .. note::
+            This is an internal package method that does not do any validation,
+            and can result in :py:class:`SlackUser` representing non-existent
+            users. Use the higher-level :py:func:`to_slack_user` method to do
+            user validation.
+
+        :param username: A Slack user ID
+        :return: A :py:class:`SlackUser` object
+        """
+
         return cls(username=username)
 
     @classmethod
     def from_email(cls, email: str) -> "SlackUser":
+        """
+        Creates a :py:class:`SlackUser` wrapper object, given an **email address**.
+
+        .. note::
+            This is an internal package method that does not do any validation,
+            and can result in :py:class:`SlackUser` representing non-existent
+            users. Use the higher-level :py:func:`to_slack_user` method to do
+            user validation.
+
+        :param email: A Slack user ID
+        :return: A :py:class:`SlackUser` object
+        """
+
         return cls(email=email)
 
     @classmethod
     def from_user(cls, user: slack_scim.User) -> "SlackUser":
+        """
+        Creates a :py:class:`SlackUser` wrapper object, given a non-null
+        :py:class:`slack_scim.User` object.
+
+        :param user: A :py:class:`slack_scim.User` object
+        :return: A :py:class:`SlackUser` object
+        """
         return cls(user=user)
 
     @classmethod
     def from_string(cls, string: str) -> "SlackUser":
+        """
+        Creates a :py:class:`SlackUser` wrapper object, given a string that may
+        represent either:
+
+        1. a Slack user ID (alphanumeric string beginning by ``W`` or ``U`` as
+           `described in the Slack API documentation
+           <https://api.slack.com/changelog/2016-08-11-user-id-format-changes>`_),
+        2. an email (string with no spaces containing an ``@``),
+        3. or a Slack username.
+
+        .. note::
+            This is an internal package method that does not do any validation,
+            and can result in :py:class:`SlackUser` representing non-existent
+            users. Use the higher-level :py:func:`to_slack_user` method to do
+            user validation.
+
+        :param string: A string
+        :return: A :py:class:`SlackUser` object
+        """
+
         # https://api.slack.com/changelog/2016-08-11-user-id-format-changes
         if string.isalnum() and string[:1].upper() in ["W", "U"]:
             return cls.from_id(user_id=string)
@@ -206,6 +378,12 @@ class SlackUser:
             cls,
             value: typing.Union[str, slack_scim.User, None]
     ) -> typing.Optional["SlackUser"]:
+        """
+
+        :param value:
+        :return:
+        """
+
         if value is None:
             return
 
@@ -272,12 +450,28 @@ class SlackUser:
 
 
 SlackUserTypes = typing.Union[str, slack_scim.User, SlackUser]
+"""
+This is a type annotation to describe all the data types supported
+by the :py:func:`to_slack_user` method:
+
+1. a string (an email, or a Slack user ID or username as described
+   in more detail in the documentation for :py:func:`SlackUser.from_string`),
+2. a :py:class:`slack_scim.User` object, from the Slack API package,
+3. an existing :py:class:`SlackUser` object.
+"""
 
 
 def to_slack_user(
         value: typing.Optional[SlackUserTypes],
         only_existing: bool = True,
 ) -> typing.Optional[SlackUser]:
+    """
+
+    :param value:
+    :param only_existing:
+    :return:
+    """
+
     # if input value is already a SlackUser class, no need to create
     # a new one?
     if isinstance(value, SlackUser):
@@ -303,6 +497,8 @@ SlackGroupMember = typing.TypedDict(
     },
     total=True,
 )
+"""
+"""
 
 
 @slacktivate.slack.retry.slack_retry
@@ -485,7 +681,15 @@ class SlackGroup:
 
 
 SlackGroupTypes = typing.Union[str, slack_scim.Group, slack_scim.v1.users.Group, SlackGroup]
+"""
+This is a type annotation to describe all the data types supported
+by the :py:func:`to_slack_group` method:
 
+1. a string (a Slack group ID or group display name as described
+   in more detail in the documentation for :py:func:`SlackGroup.from_string`),
+2. a :py:class:`slack_scim.Group` object, from the Slack API package,
+3. an existing :py:class:`SlackGroup` object.
+"""
 
 def to_slack_group(
         value: typing.Optional[SlackGroupTypes],

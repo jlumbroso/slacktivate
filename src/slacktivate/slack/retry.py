@@ -86,8 +86,20 @@ def slack_give_up_or_retry(
 # see https://api.slack.com/docs/rate-limits
 # and https://api.slack.com/scim#ratelimits
 
+
 slack_retry = backoff.on_exception(
     wait_gen=backoff.constant,
     exception=slack_scim.SCIMApiError,
     giveup=slack_give_up_or_retry
 )
+"""
+This is a decorator to automatically handle the Slack vendor exceptions,
+:py:exc:`slack.errors.SlackApiError` and :py:exc:`slack_scim.SCIMApiError`
+when it is caused by a rate-limiting error. When such an exception is
+thrown, this decorator will pause for an unspecified, random amount of
+time and retry the exact same method call.
+
+.. seealso::
+    This functionality is powered by the :py:mod:`backoff` package
+    (`available on GitHub <https://github.com/litl/backoff>`_).
+"""
