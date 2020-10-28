@@ -1,4 +1,8 @@
 
+"""
+This submodule
+"""
+
 import os
 import typing
 
@@ -36,6 +40,31 @@ except ImportError:
 # should be contained in this package's README.md
 
 SLACK_TOKEN = os.getenv("SLACK_TOKEN")
+"""
+In order to use the Slack SCIM API, you need to be an owner of the workspace,
+and obtain an API token with ``admin`` scope.
+
+As explained in
+`the official Slack SCIM API documentation <https://api.slack.com/scim#access>`_,
+the easiest way to obtain a valid token for the purposes of SCIM provisioning
+is as follows:
+
+1. As *a Workspace/Organization Owner*, create
+   `a new app for your workspace <https://api.slack.com/apps?new_app=1>`_ (see
+   `here <https://api.slack.com/start/overview#creating>`_ for the documentation).
+2. Add the ``admin`` OAuth scope to
+   `the "User Token Scopes" section <https://api.slack.com/authentication/quickstart#configuring>`_.
+3. Install the app to your workspace (see
+   `here <https://api.slack.com/start/overview#installing_distributing>`_ for
+   the documentation).
+4. Use the generated token (if you are provided with multiple tokens, use the
+   "OAuth Access Token" not the "Bot User OAuth Access Token").
+
+Note that you can easily **reinstall your app** with different permissions if
+it turns out you did not select all the necessary permissions.
+
+"""
+
 
 # Client to interact with the Slack API <3 <3 <3
 # https://api.slack.com/methods
@@ -60,6 +89,23 @@ def login(
         silent_error: bool = False,
         update_global: bool = True,
 ) -> typing.Tuple[slack.WebClient, slack_scim.SCIMClient]:
+    """
+    Returns a pair containing a logged-in Slack API and Slack
+    SCIM API client.
+
+    :param token: A valid Slack OAuth token (if none is provided,
+         will try to obtain it from the environment)
+
+    :param silent_error: Flag whether to silently fail when no valid
+        token is available or not
+
+    :param update_global: Flag whether to update the global clients with
+        the result of this operation (useful to globally change which
+        workspace is being affected by this library)
+
+    :return: A pair containing a properly logged-in Slack API client and
+        Slack SCIM API client
+    """
 
     global _slack_client, _slack_scim
 

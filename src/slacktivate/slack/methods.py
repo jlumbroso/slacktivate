@@ -1,4 +1,13 @@
 
+"""
+This submodule provides an intermediate abstraction layer to the methods
+provided by the Slack API and Slack SCIM API. This layer handles certain
+errors (such as rate-limiting exceptions), uses the wrapper classes defined
+in :py:mod:`slacktivate.slack.classes`, and provides a coherent,
+predictable syntax to do typical, elementary administrative operations on
+the logged-in Slack workspace.
+"""
+
 import typing
 
 import slack
@@ -32,10 +41,16 @@ __all__ = [
     "channels_list",
     "channel_create",
     "conversation_member_ids",
+    "team_access_logs",
 ]
 
 
-MAX_PAGE_SIZE = 1000
+MAX_PAGE_SIZE: int = 1000
+"""
+Internal maximal page size for API calls (see
+`here <https://api.slack.com/changelog/2019-06-have-scim-will-paginate>`
+for more information).
+"""
 
 _custom_fields_by_label: typing.Optional[typing.Dict[str, dict]] = None
 
@@ -45,6 +60,24 @@ def user_patch(
         user: slacktivate.slack.classes.SlackUserTypes,
         changes: dict,
 ) -> typing.Optional[slacktivate.slack.classes.SlackUser]:
+    """
+    Patch an existing Slack user, as provided by the :py:data:`user` parameter,
+    with modifications provided in the :py:data:`changes` parameter.
+
+    .. seealso::
+        See the `Slack SCIM API documentation <https://api.slack.com/scim#users>`_
+        for an overview of the modifications that can be effected through this method
+        with the dictionary passed through the :py:data:`changes` parameter.
+
+    :param user: A valid user object
+    :type user: :py:class:`slacktivate.slack.classes.SlackUserTypes`
+
+    :param changes: A dictionary containing the changes to make
+    :type changes: dict
+
+    :return: The modified :py:class:`SlackUser` if successful,
+        :py:data:`None` otherwise.
+    """
 
     user = slacktivate.slack.classes.to_slack_user(user)
     if user is None:
@@ -64,20 +97,50 @@ def user_set_active(
         user: slacktivate.slack.classes.SlackUserTypes,
         active: bool = True,
 ) -> bool:
+    """
+    Activates (or deactivates) an existing Slack user.
+
+    :param user: A valid user object
+    :type user: :py:class:`slacktivate.slack.classes.SlackUserTypes`
+
+    :param active: Determines whether to make the user active
+        (:py:data:`True`) or not (:py:data:`False`)
+
+    :return: :py:data:`True` if the status of the user was successfully changed
+    """
+
     user = user_patch(
         user=user,
         changes={
-            "active": active
+            "active": active,
         }
     )
     return user is not None and user.active == active
 
 
 def user_activate(user: slacktivate.slack.classes.SlackUserTypes) -> bool:
+    """
+    Ensures an existing Slack user is active.
+
+    :param user: A valid user object
+    :type user: :py:class:`slacktivate.slack.classes.SlackUserTypes`
+
+    :return: :py:data:`True` if the status of the user is active
+    """
+
     return user_set_active(user=user, active=True)
 
 
 def user_deactivate(user: slacktivate.slack.classes.SlackUserTypes) -> bool:
+    """
+    Ensures an existing Slack user is deactivate.
+
+    :param user: A valid user object
+    :type user: :py:class:`slacktivate.slack.classes.SlackUserTypes`
+
+    :return: :py:data:`True` if the status of the user is active
+    """
+
     return user_set_active(user=user, active=False)
 
 
@@ -85,6 +148,26 @@ def user_deactivate(user: slacktivate.slack.classes.SlackUserTypes) -> bool:
 def user_create(
         attributes: typing.Dict[str, typing.Union[str, typing.Dict[str, str]]]
 ) -> typing.Optional[slacktivate.slack.classes.SlackUser]:
+    """
+    Creates a new Slack user, based on the provided :py:data:`attributes`,
+    using Slack SCIM API provisioning.
+
+    .. note::
+        Only the :py:data:`userName` and :py:data:`emails` attributes are
+        `required to create a user <https://api.slack.com/scim#scim-api-endpoints__users>`_.
+
+    :param attributes: A (possibly nested) dictionary containing the attributes
+        for the user to be created
+    :type attributes: dict
+
+    :return: A valid Slack user, if successful
+    """
+
+    # required_fields_present = (
+    #     attributes is not None and
+    #     "userName" in attributes and
+    #     "emails" in attributes
+    # )
 
     with slacktivate.slack.clients.managed_scim() as scim:
         result = scim.create_user(
@@ -100,6 +183,19 @@ def list_custom_profile_fields(
         index_by_label: bool = False,
         silent_error: bool = True,
 ) -> typing.Dict[str, str]:
+    """
+    Returns a dictionary of all the custom profile fields defined in the
+    currently logged-in Slack workspace (custom fields are only available
+    in Slack Plus and above plans).
+
+    :param index_by_label:
+    :type index_by_label: bool
+
+    :param silent_error:
+    :type silent_error: bool
+
+    :return:
+    """
 
     # https://api.slack.com/methods/team.profile.get
     try:

@@ -35,6 +35,12 @@ except ImportError:
     version = ''
     release = ''
 
+# Censor sensitive information before generating the docs
+try:
+    import slacktivate.slack.clients
+    slacktivate.slack.clients.SLACK_TOKEN = "<SLACK TOKEN>"
+except ImportError:
+    pass
 
 
 # -- General configuration ---------------------------------------------------

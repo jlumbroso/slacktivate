@@ -1,4 +1,11 @@
 
+"""
+This submodule contains a few helper methods that provide a decorator
+:py:func:`slack_retry` that handles all the rate-limiting API exceptions
+that are raised by the Slack API and Slack SCIM API packages. This helps
+streamline the composition of more complex macros.
+"""
+
 import logging
 import time
 import typing
@@ -12,8 +19,17 @@ import slack_scim
 __author__ = "Jérémie Lumbroso <lumbroso@cs.princeton.edu>"
 
 __all__ = [
-    "slack_retry"
+    "DEFAULT_SECONDS_TO_WAIT",
+    "slack_retry",
 ]
+
+
+DEFAULT_SECONDS_TO_WAIT: int = 20
+"""
+Default number of seconds to wait when a rate limiting exception
+is thrown by the Slack API or Slack SCIM API, but without a valid
+``Retry-After`` header.
+"""
 
 
 def _give_up_or_retry_aux(status_code: int, headers: dict) -> bool:
@@ -25,7 +41,7 @@ def _give_up_or_retry_aux(status_code: int, headers: dict) -> bool:
     try:
         time_to_wait = int(headers.get("retry-after", 0))
     except ValueError:
-        time_to_wait = 20
+        time_to_wait = DEFAULT_SECONDS_TO_WAIT
 
     logging.debug("Slack SCIM Rate Limiting: Waiting {} seconds...".format(
         time_to_wait,
@@ -93,11 +109,15 @@ slack_retry = backoff.on_exception(
     giveup=slack_give_up_or_retry
 )
 """
-This is a decorator to automatically handle the Slack vendor exceptions,
-:py:exc:`slack.errors.SlackApiError` and :py:exc:`slack_scim.SCIMApiError`
-when it is caused by a rate-limiting error. When such an exception is
-thrown, this decorator will pause for an unspecified, random amount of
-time and retry the exact same method call.
+.. py:decorator:: @slack_retry
+ 
+    This is a decorator to automatically handle the Slack vendor exceptions,
+    :py:exc:`slack.errors.SlackApiError` and :py:exc:`slack_scim.SCIMApiError`
+    when it is caused by a rate-limiting error (as described in the
+    `Slack API documentation <https://api.slack.com/docs/rate-limits>`_ and the
+    `Slack SCIM API documentation <https://api.slack.com/scim#ratelimits>`_.
+    When such an exception is thrown, this decorator will pause for an unspecified,
+    random amount of time and retry the exact same method call.
 
 .. seealso::
     This functionality is powered by the :py:mod:`backoff` package

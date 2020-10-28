@@ -2,6 +2,7 @@
 import typing
 
 import slacktivate.helpers.photo
+import slacktivate.input.config
 import slacktivate.input.helpers
 import slacktivate.input.parsing
 import slacktivate.slack.classes
@@ -12,6 +13,8 @@ __author__ = "Jérémie Lumbroso <lumbroso@cs.princeton.edu>"
 
 __all__ = [
     "users_iterate",
+    "users_list",
+
     "users_deactivate",
     "users_ensure",
     "users_update",
@@ -174,6 +177,21 @@ def users_list(
     typing.List[typing.Tuple[str, slacktivate.slack.classes.SlackUser]],
     typing.Dict[str, slacktivate.slack.classes.SlackUser],
 ]:
+    """
+    Returns a list (or dictionary) of the existing users in the Slack workspace.
+
+    :param only_active: Flag to only return active users
+    :param only_email: Flag to iterate over emails, not ``(email, user)`` pairs
+    :param no_bots: Flag to filter out bot users
+    :param as_dict: Flag to determine whether to return a list or dictionary
+    :type as_dict: bool
+    :param refresh: Flag to force a refresh of the cache
+    :type refresh: bool
+
+    :return: A list of emails, or ``(email, user)`` pairs; or a dictionary mapping
+        emails to users, of the existing users in the Slack workspace.
+    """
+
     iterator = users_iterate(
         only_active=only_active,
         only_email=only_email,
@@ -193,6 +211,17 @@ def users_deactivate(
         config: slacktivate.input.config.SlacktivateConfig,
         dry_run: bool = False,
 ) -> typing.Union[typing.List[slacktivate.slack.classes.SlackUser], typing.Tuple[int, int, int]]:
+    """
+    Deactivates all users that are not described in the provided :py:data:`config`
+    parameter of type :py:class:`SlacktivateConfig`.
+
+    :param config: A :py:class:`SlacktivateConfig` object storing the compiled
+        Slacktivate specification for this workspace
+    :param dry_run: Flag to only return users to deactivate, rather than deactivate them
+
+    :return: If :py:data:`dry_run` is set to :py:data:`True`, then the list of
+        :py:class:`SlackUser` of the users to be deactivated; otherwise a t
+    """
 
     # refresh the user cache
     _refresh_users_cache()
