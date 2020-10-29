@@ -89,9 +89,33 @@ class SlacktivateConfig:
         for userconfig in self._config.get("users"):
             userconfig = typing.cast(slacktivate.input.parsing.UserSourceConfig, userconfig)
             users = userconfig.load(vars=self._vars, alternate_emails=self._alternate_emails)
-            self._users.update(slacktivate.input.helpers.reindex_user_data(
+
+            # merging with existing data
+
+            old_users = self._users
+            new_users = slacktivate.input.helpers.reindex_user_data(
                 user_data=users,
-            ))
+            )
+
+            for (key, user) in new_users.items():
+
+                # new user, easy
+                if key not in old_users:
+                    old_users[key] = user
+                    continue
+
+                # existing user, need to merge carefully
+                combined_user = slacktivate.input.helpers.merge_dict(
+                    src=old_users[key],
+                    dest=user,
+                )
+                old_users[key] = combined_user
+
+            self._users = old_users
+
+            # self._users.update(slacktivate.input.helpers.reindex_user_data(
+            #     user_data=users,
+            # ))
 
         self._groups = []
 

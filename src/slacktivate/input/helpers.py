@@ -1,5 +1,6 @@
 
 import collections
+import copy
 import typing
 
 import jinja2
@@ -39,6 +40,50 @@ def flatten(
         return gen
 
     return list(gen)
+
+
+def merge_dict(
+        src: typing.Optional[dict] = None,
+        dest: typing.Optional[dict] = None,
+        only_exact_merge: bool = False,
+) -> typing.Optional[dict]:
+
+    # edge cases
+    if src is None:
+        return dest
+    if dest is None:
+        return src
+
+    result = copy.deepcopy(src)
+    for (key, value) in dest.items():
+
+        # easy: new field
+        if key not in result:
+            result[key] = value
+            continue
+
+        # type list
+        if type(value) is list and type(result[key]) is list:
+
+            # concatenate results
+            l = result[key]
+            for v in value:
+                if v not in l:
+                    l.append(v)
+            result[key] = l
+
+        else:
+
+            if only_exact_merge:
+                if result[key] != value:
+                    raise ValueError(
+                        "merging the same user from different sources, conflict on {}".format(key)
+                    )
+
+            # override
+            result[key] = value
+
+    return result
 
 
 def parseable_jinja2(s: str) -> bool:

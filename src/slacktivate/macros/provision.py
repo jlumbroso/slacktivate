@@ -1,4 +1,10 @@
 
+"""
+This submodule contains a number of high-level macros that focus on
+the provisioning/deprovisioning of Slack users, in particular using
+the Slack SCIM API.
+"""
+
 import typing
 
 import slacktivate.helpers.photo
@@ -18,19 +24,37 @@ __all__ = [
     "users_deactivate",
     "users_ensure",
     "users_update",
+
+    "groups_ensure",
+
+    "channels_ensure",
 ]
 
 
 MAX_USER_LIMIT = 1000
 
 SLACK_BOTS_DOMAIN = "@slack-bots.com"
+"""
+Domain name of email addresses associated with Slack apps and bots. This
+is useful to filter out these bots when listing users, for instance, with
+:py:func:`users_list`.
+"""
 
 
 _users_cache_by_email: typing.Optional[typing.Dict[str, slacktivate.slack.classes.SlackUser]] = None
+"""Internal cache of the users, indexed by their *primary email*, in the
+currently logged-in Slack workspace, to speed up queries."""
+
 _users_cache_by_id: typing.Optional[typing.Dict[str, slacktivate.slack.classes.SlackUser]] = None
+"""Internal cache of the users, indexed by their *Slack user ID*, in the
+currently logged-in Slack workspace, to speed up queries."""
 
 
 def _refresh_users_cache() -> typing.NoReturn:
+    """
+
+    :return:
+    """
     global _users_cache_by_email, _users_cache_by_id
 
     result = slacktivate.slack.clients.scim().search_users(count=MAX_USER_LIMIT)
