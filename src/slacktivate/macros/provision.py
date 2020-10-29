@@ -22,6 +22,7 @@ __all__ = [
 
 
 MAX_USER_LIMIT = 1000
+
 SLACK_BOTS_DOMAIN = "@slack-bots.com"
 
 
@@ -210,6 +211,7 @@ def users_list(
 def users_deactivate(
         config: slacktivate.input.config.SlacktivateConfig,
         dry_run: bool = False,
+        only_active: bool = False,
 ) -> typing.Union[typing.List[slacktivate.slack.classes.SlackUser], typing.Tuple[int, int, int]]:
     """
     Deactivates all users that are not described in the provided :py:data:`config`
@@ -244,6 +246,11 @@ def users_deactivate(
 
         # if in the configuration file, user should be there, so skip
         if user_email in config_user_emails:
+            continue
+
+        # if only active users should be provided (the diff'), skip
+        # if not active
+        if only_active and not user.active:
             continue
 
         # at this point, a user should not be in the Slack, and should
@@ -367,7 +374,7 @@ def users_update(
         keep_name = config.settings.get(
             slacktivate.input.config.SETTING_KEEP_CUSTOMIZED_NAME,
             True,
-            )
+        )
 
         keep_photo = config.settings.get(
             slacktivate.input.config.SETTING_KEEP_CUSTOMIZED_PHOTOS,
@@ -381,7 +388,6 @@ def users_update(
             keep_photo = not overwrite_image
 
         # change name if necessary
-
         if not keep_name:
             try:
                 slacktivate.slack.methods.user_patch(
@@ -432,7 +438,7 @@ def users_update(
         )
 
         users_provisioned[user_email] = result
-    print(user_errors)
+
     return users_provisioned
 
 

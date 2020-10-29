@@ -57,6 +57,16 @@ class SlacktivateConfig:
 
         self._alternate_emails = {}
 
+        # Parsing booleans?
+        for (key, value) in self._config.get("settings", dict()).items():
+            if not type(value) is str:
+                continue
+            value = value.lower()
+            if value == "true":
+                self._config["settings"][key] = True
+            if value == "false":
+                self._config["settings"][key] = False
+
         if "alternate_emails" in self._config.get("settings", dict()):
 
             lines = None

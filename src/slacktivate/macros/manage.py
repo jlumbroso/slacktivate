@@ -14,12 +14,15 @@ import slacktivate.slack.methods
 __author__ = "Jérémie Lumbroso <lumbroso@cs.princeton.edu>"
 
 __all__ = [
+    "UserMergeOptionsType",
     "UserMergeType",
 
     "user_access_logs",
     "user_access_count",
     "user_access_earliest",
+    "user_access_latest",
 
+    "user_merge",
 ]
 
 
@@ -47,11 +50,48 @@ def _refresh_access_logs(force_refresh: typing.Optional[bool] = None):
 
 
 def user_access_logs(
-        user: slacktivate.slack.classes.SlackUserTypes
+        user: slacktivate.slack.classes.SlackUserTypes,
+        force_refresh: typing.Optional[bool] = None,
 ) -> typing.Optional[typing.List[dict]]:
+    """
+    Returns a list of the access logs for the requested user.
+
+    An individual access log entry can aggregate multiple events or
+    represent a single event (this depends on the value of ``count``),
+    for example, the following entry represents a single event::
+
+        {
+            "user_id": "UTZLJA2JK",
+            "username": "lumbroso",
+            "date_first": 1603940797,
+            "date_last": 1603940797,
+            "count": 1,
+            "ip": "96.248.68.184",
+            "user_agent": "ApiApp/A0104EA0FPD Python/3.8.5 slackclient/2.9.3 Darwin/19.6.0",
+            "isp": "",
+            "country": "",
+            "region": ""
+        }
+
+    There is no way to access the logs randomly, therefore this method
+    relies on a local cache of the full team access logs. This means that
+    the first call to this method may take some time while the access logs
+    are loaded using an internal call to
+    :py:func:`slacktivate.slack.methods.team_access_logs`; and the data
+    may be slightly out of date (a refresh of the data can be forced by
+    setting :py:data:`force_refresh` to :py:data:`True`).
+
+    :param user: A valid Slack user
+    :type user: :py:class:`slacktivate.slack.classes.SlackUserTypes`
+
+    :param force_refresh: Flag deterrmining whether to flush the cache
+    :type force_refresh: bool
+
+    :return: A list of all available access logs for the user
+    """
 
     # load cache if it does not already exist
-    _refresh_access_logs()
+    _refresh_access_logs(force_refresh=force_refresh)
 
     # normalize user
     user = slacktivate.slack.classes.to_slack_user(user)
@@ -73,8 +113,29 @@ def user_access_logs(
 
 
 def user_access_count(
-        user: slacktivate.slack.classes.SlackUserTypes
+        user: slacktivate.slack.classes.SlackUserTypes,
+        force_refresh: typing.Optional[bool] = None,
 ) -> int:
+    """
+    Returns the number of times the user logged into Slack..
+
+    There is no way to access the logs randomly, therefore this method
+    relies on a local cache of the full team access logs. This means that
+    the first call to this method may take some time while the access logs
+    are loaded using an internal call to
+    :py:func:`slacktivate.slack.methods.team_access_logs`; and the data
+    may be slightly out of date (a refresh of the data can be forced by
+    setting :py:data:`force_refresh` to :py:data:`True`).
+
+    :param user: A valid Slack user
+    :type user: :py:class:`slacktivate.slack.classes.SlackUserTypes`
+
+    :param force_refresh: Flag deterrmining whether to flush the cache
+    :type force_refresh: bool
+
+    :return: The total number of accesses a user has made
+        (or -1 if user is not found)
+    """
 
     # normalize user
     user = slacktivate.slack.classes.to_slack_user(user)
@@ -141,6 +202,16 @@ def user_merge(
         merge_username: UserMergeType = None,
         merge_primary_email: UserMergeType = None,
 ) -> typing.Optional[slacktivate.slack.classes.SlackUser]:
+    """
+
+    :param user_from:
+    :param user_to:
+    :param merge_account:
+    :param merge_username:
+    :param merge_primary_email:
+    :return:
+    """
+
     user_from = slacktivate.slack.classes.to_slack_user(user_from)
     user_to = slacktivate.slack.classes.to_slack_user(user_to)
 

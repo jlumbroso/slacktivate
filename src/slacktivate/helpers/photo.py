@@ -1,4 +1,6 @@
 
+
+
 import base64
 import enum
 import io
@@ -45,6 +47,13 @@ ANONYMOUS_AVATAR_BINARY_DATA = base64.b64decode("".join(
      "d+I4ShEwCV+AR6+YRDkCfo2CPQgiyU1BD5cggCh+1gIrS4CTHMK3weB/+xMII8n2oJ8tXZ",
      "QmIIrOQVeC1Dbi93bCyhNgJWwmvh8EIJB/Z+NOooAgtRP94szvPHUZO2nbKc/6OStRgFUB",
      "LAT8AZ+XolMgM/v8AAAAAElFTkSuQmCC"]))
+"""
+This is the binary JPEG image of a default anonymous
+avatar that Slack currently assigns to users who have not uploaded a custom
+image to their profile yet. Although Slack uses default anonymous avatars of
+several different colors, through heurististics we are able to detect
+whether a profile contains an anonymous image.
+"""
 
 ANONYMOUS_AVATAR_IMAGE = PIL.Image.open(io.BytesIO(ANONYMOUS_AVATAR_BINARY_DATA))
 
