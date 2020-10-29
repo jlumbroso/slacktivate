@@ -1,7 +1,8 @@
 
 on: ["push", "pull_request"]
 
-name: Running tests with pytest in Python 3.8
+# Running tests with pytest in Python 3.8
+name: pytest
 jobs:
   pytest:
     name: pytest
