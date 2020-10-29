@@ -199,6 +199,7 @@ class SlacktivateCliContextObject:
 
         # Update internally
         os.environ["SLACK_TOKEN"] = self._slack_token_last_used
+        slacktivate.slack.clients.SLACK_TOKEN = self._slack_token_last_used
 
         return slacktivate.slack.clients.login(
             token=self._slack_token_last_used,
@@ -272,7 +273,7 @@ cli_root_group_green = click.group(
 
 cli_opt_token = click.option(
     "--token",
-    envvar="SLACK_TOKEN", metavar="$SLACK_TOKEN",
+    metavar="$SLACK_TOKEN",
     help="Slack API token (requires being an owner or admin)."
 )
 
