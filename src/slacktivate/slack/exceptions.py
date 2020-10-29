@@ -32,7 +32,8 @@ def handle_slack_errors(
     # decorator if there is one, otherwise user still see it
     retry_error = not slacktivate.slack.retry.slack_give_up_or_retry(err=exc_val)
     if retry_error:
-        return False
+        # should be suppressed
+        return True
 
     if issubclass(exc_type, slack.errors.SlackApiError):
         pass

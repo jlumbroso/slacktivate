@@ -24,6 +24,11 @@ __all__ = [
 ]
 
 
+SLACK_RATE_LIMITING_STATUS_CODE = 429
+
+SLACK_RATE_LIMITING_ERROR_NAME = "ratelimited"
+
+
 DEFAULT_SECONDS_TO_WAIT: int = 20
 """
 Default number of seconds to wait when a rate limiting exception
@@ -32,14 +37,31 @@ is thrown by the Slack API or Slack SCIM API, but without a valid
 """
 
 
-def _give_up_or_retry_aux(status_code: int, headers: dict) -> bool:
-    if status_code != 429:
-        # True: give up
-        return True
+def _give_up_or_retry_aux(status_code: int, headers: dict, data: dict = None) -> bool:
 
-    # just need to wait
+    # first determine whether the exception is just rate-limiting (give up: False)
+    # or something more serious (give up: True)
+
+    if status_code != SLACK_RATE_LIMITING_STATUS_CODE:
+
+        if data is None:
+            # True: give up
+            return True
+
+        # if there is data, double check payload to see if it indicates
+        # rate limiting (i.e., {'ok': False, 'error': 'ratelimited'})
+
+        if not data.get("ok", True) and data.get("error") == SLACK_RATE_LIMITING_ERROR_NAME:
+            pass
+
+        else:
+            # True: give up
+            return True
+
+    # we've asserted that this is a rate-limiting error
+    # so just need to wait
     try:
-        time_to_wait = int(headers.get("retry-after", 0))
+        time_to_wait = int(headers.get("retry-after", DEFAULT_SECONDS_TO_WAIT))
     except ValueError:
         time_to_wait = DEFAULT_SECONDS_TO_WAIT
 
@@ -62,10 +84,13 @@ def slack_api_give_up_or_retry(err: slack.errors.SlackApiError) -> bool:
     # https://github.com/slackapi/python-slackclient/blob/1a1f9d05e4653897ba4474a88621cc1482be19b1/slack/errors.py#L18-L33
 
     response: slack.web.slack_response.SlackResponse = err.response
-
+    print("saguor>>")
+    print(response)
+    print(response.data)
     return _give_up_or_retry_aux(
         status_code=response.status_code,
         headers=response.headers,
+        data=response.data,
     )
 
 

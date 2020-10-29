@@ -607,6 +607,7 @@ def team_access_logs(
         count: typing.Optional[int] = None,
         user: typing.Optional[slacktivate.slack.classes.SlackGroupTypes] = None,
         users: typing.Optional[typing.List[slacktivate.slack.classes.SlackGroupTypes]] = None,
+        page_shifting: bool = True,
 ):
     # preprocess users
 
@@ -630,34 +631,58 @@ def team_access_logs(
     if count is not None and count < MAX_PAGE_SIZE:
         req_count = count
 
-    with slacktivate.slack.clients.managed_api() as client:
-        while True:
+    # needed to circumvent a Slack API limitation to 100 pages
+    page_shift = 0
+
+    while True:
+        with slacktivate.slack.clients.managed_api() as client:
             result = client.team_accessLogs(
                 before=before,
                 count=req_count,
-                page=page,
+                page=page - page_shift,
             )
 
-            # retrieve logins
-            data = result.get("logins", list())
+        # retry
+        if result is None:
+            continue
 
-            if data is None or len(data) == 0:
-                # if there's nothing left to read exit loop
+        # retrieve logins
+        data = result.get("logins", list())
+
+        if data is None or len(data) == 0:
+            # if there's nothing left to read exit loop
+            break
+
+        # if only interested in records from specific users only keep those
+        # results
+        if user_filter is not None:
+            data = list(filter(lambda login: login["user_id"] in user_filter, data))
+
+        agg_logs += data
+
+        # if we've retrieved as many records as we wanted, exist
+        if count is not None and len(agg_logs) > count:
+            break
+
+        # next page!
+        page += 1
+
+        # Slack has a limititaton to 100 pages (even if there are more
+        # available!!! hacks :-)
+        if page % 100 == 1:
+
+            # this flag limits how much data we pull
+            if not page_shifting:
                 break
 
-            # if only interested in records from specific users only keep those
-            # results
-            if user_filter is not None:
-                data = list(filter(lambda login: login["user_id"] in user_filter, data))
+            page_shift += 100
 
-            agg_logs += data
+            # earliest date of the last data collected which is in
+            # reverse chronological order, from newest to oldest so
+            # we are looking for all events before the earliest one
+            # we have collected
 
-            # if we've retrieved as many records as we wanted, exist
-            if count is not None and len(agg_logs) > count:
-                break
-
-            # next page!
-            page += 1
+            before = data[-1]["date_first"] - 1
 
     return agg_logs[:count]
 
