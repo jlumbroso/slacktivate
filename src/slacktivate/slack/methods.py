@@ -28,6 +28,7 @@ __all__ = [
     "user_activate",
     "user_deactivate",
     "user_create",
+    "list_custom_profile_fields",
     "user_profile_set",
     "user_image_set",
 
@@ -188,13 +189,39 @@ def list_custom_profile_fields(
     currently logged-in Slack workspace (custom fields are only available
     in Slack Plus and above plans).
 
-    :param index_by_label:
+    By default, the dictionary is indexed by the fields internal ID::
+
+        {
+            'Xf01AVK94ASU': {
+                'id': 'Xf01AVK94ASU',
+                'ordering': 0,
+                'field_name': None,
+                'label': 'Pronouns',
+                'hint': 'E.g.: she/her/hers, he/him/his, they/them/theirs, ze/zim/zirs, ...',
+                'type': 'text',
+                'possible_values': None,
+                'options': None,
+                'is_hidden': False
+            }
+            ...
+        }
+
+    For more information, see `Slack's documentation of the API method
+    <https://api.slack.com/methods/team.profile.get>`_.
+
+    :param index_by_label: Flag to indicate whether the returned dictionary
+        should be indexed by the label, rather than the ID
     :type index_by_label: bool
 
-    :param silent_error:
+    :param silent_error: Flag to indicate whether to silently suppress any
+        unexpected error and return an empty dictionary in that case
     :type silent_error: bool
 
-    :return:
+    :raises: If :py:data:`silent_error` is :py:data:`False`, may raise a
+        :py:exc:`slack.errors.SlackApiError`
+
+    :return: The dictionary mapping a field ID to the internal dictionary
+        defining a custom Slack profile field
     """
 
     # https://api.slack.com/methods/team.profile.get
@@ -232,14 +259,51 @@ def list_custom_profile_fields(
     return indexed_fields
 
 
-def _refresh_custom_fields_cache() -> typing.NoReturn:
+def _refresh_custom_fields_cache(silent_error: bool = True) -> typing.NoReturn:
+    """
+    Updates the internal cache of the logged-in Slack workspace's
+    custom fields definition.
+    """
     global _custom_fields_by_label
-    _custom_fields_by_label = list_custom_profile_fields()
+    _custom_fields_by_label = list_custom_profile_fields(
+        index_by_label=True,
+        silent_error=silent_error,
+    )
 
 
 def make_user_extra_fields_dictionary(
         attributes: dict,
 ) -> typing.Dict[str, typing.Any]:
+    """
+    Returns the payload to update a Slack user's customized profile fields; this
+    is an internal method, that is only useful to make calls directly to the
+    Slack API client.
+
+    This method expects to provided a dictionary :py:data:`attributes`, mapping
+    the customized fields to the their value, such as::
+
+        {
+            "Degree": "Ph.D.",
+            "GitHub": "https://github.com/jlumbroso/",
+        }
+
+    Internally, a cache is maintained containing the result of a call to
+    :py:func:`list_custom_profile_fields`, which allows this payload to be
+    built by translating the labels into their corresponding field IDs.
+
+    The resulting payload might be::
+
+        {
+            "Xf01957FNX4N": { "value": "Ph.D.", "alt":"" },
+            "Xf019AHU8MJ9": { "value": "https://github.com/jlumbroso/", "alt":"" },
+        }
+
+    :param attributes: A dictionary mapping the profile customized fields to
+        their content for a given user
+
+    :return: A dictionary representing the payload to update a Slack user's
+        customized profile fields
+    """
 
     # ensure we have the cache
     if _custom_fields_by_label is None:
@@ -254,11 +318,31 @@ def make_user_extra_fields_dictionary(
 
 
 def make_user_dictionary(
-        attributes,
-        include_naming=True,
-        include_image=True,
-        include_fields=True,
-):
+        attributes: dict,
+        include_naming: bool = True,
+        include_image: bool = True,
+        include_fields: bool = True,
+) -> typing.Optional[dict]:
+    """
+    Returns the payload to update a Slack user's profile; this is an internal
+    method, that is only useful to make calls directly to the Slack API client.
+
+    :param attributes: A dictionary mapping the profile customized fields to
+        their content for a given user
+
+    :param include_naming: Flag determining whether to include the naming
+        attributes (such as ``name``, ``displayName``, ``nickName``)
+
+    :param include_image: Flag determining whether to include the profile image
+
+    :param include_fields: Flag determining whether to include customized
+        profile fields (as processed by the method
+        :py:func:`make_user_extra_fields_dictionary`)
+
+    :return: A dictionary representing the payload to update a Slack user's
+        profile
+    """
+
     if attributes.get("email") is None:
         return
 
@@ -310,6 +394,19 @@ def user_profile_set(
         user: slacktivate.slack.classes.SlackUserTypes,
         extra_fields: dict,
 ) -> typing.Optional[slacktivate.slack.classes.SlackUser]:
+    """
+    Updates a Slack user's customized profile fields.
+
+    :param user: A valid Slack user
+    :type user: :py:class:`slacktivate.slack.classes.SlackUserTypes`
+
+    :param extra_fields: A dictionary mapping customized profile
+        fields to update, to their new values
+
+    :type extra_fields: dict
+
+    :return:
+    """
 
     user = slacktivate.slack.classes.to_slack_user(user)
     if user is None:
