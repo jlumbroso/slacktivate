@@ -1,5 +1,13 @@
 # Slacktivate
 
+![pytest](https://github.com/jlumbroso/slacktivate/workflows/pytest/badge.svg)
+ [![codecov](https://codecov.io/gh/jlumbroso/slacktivate/branch/master/graph/badge.svg)](https://codecov.io/gh/jlumbroso/slacktivate)
+ [![Documentation Status](https://readthedocs.org/projects/slacktivate/badge/?version=latest)](https://slacktivate.readthedocs.io/en/latest/?badge=latest)
+ [![Downloads](https://pepy.tech/badge/slacktivate)](https://pepy.tech/project/slacktivate)
+ [![Run on Repl.it](https://repl.it/badge/github/jlumbroso/slacktivate)](https://repl.it/github/jlumbroso/slacktivate)
+ [![Stargazers](https://img.shields.io/github/stars/jlumbroso/slacktivate?style=social)](https://github.com/jlumbroso/slacktivate)
+
+
 Slacktivate is a Python library and Command-Line Interface
 to assist in the provisioning of a Slack workspace, using
 both the Slack API and the Slack SCIM API.
