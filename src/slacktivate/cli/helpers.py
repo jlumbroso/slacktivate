@@ -173,13 +173,27 @@ class SlacktivateCliContextObject:
         return self._slacktivate_config
 
     def login(self) -> typing.Tuple[slack.WebClient, slack_scim.SCIMClient]:
-        slack_token = self._slack_token
+        # 1. by default use environment variable
+        slack_token = os.getenv("SLACK_TOKEN")
 
+        # trying again with .env file lying around
+        try:
+            import dotenv
+            if not dotenv.load_dotenv():
+                dotenv.load_dotenv(dotenv.find_dotenv())
+        except ImportError:
+            pass
+
+        # 2. may be overriden by .env variable
+        slack_token = os.getenv("SLACK_TOKEN") if os.getenv("SLACK_TOKEN") is not None else slack_token
+
+        # 3. may be overriden by specification.yaml setting
         if self._specification is not None:
             settings_slack_token = self._specification.get("settings", dict()).get("slack_token")
             slack_token = settings_slack_token if settings_slack_token is not None else slack_token
 
-        slack_token = slack_token if slack_token is not None else os.getenv("SLACK_TOKEN")
+        # 4. may be overriden by the command line arg
+        slack_token = self._slack_token if self._slack_token is not None else slack_token
 
         self._slack_token_last_used = slack_token
 
