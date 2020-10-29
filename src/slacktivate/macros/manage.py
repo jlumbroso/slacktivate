@@ -1,4 +1,9 @@
 
+"""
+This submodule contains a number of high-level macros that assist
+in complicated, multi-step tasks to be applied on Slack objects.
+"""
+
 import datetime
 import enum
 import operator
@@ -27,23 +32,71 @@ __all__ = [
 
 
 class UserMergeOptionsType(enum.Enum):
+    """
+    Enumeration class of the different possibilities for merging user
+    attributes in the :py:func:`user_merge` method.
+    """
+
     KEEP_FROM = "keep-from"
+    """Keep the attributes of the user specified as :py:data:`user_from`."""
+
     KEEP_TO = "keep-to"
+    """Keep the attributes of the user specified as :py:data:`user_to`."""
+
     KEEP_MOST_FREQUENT_LOGIN = "most-freq-login"
+    """Keep the attributes of the user that has *most frequently logged* into Slack."""
+
     KEEP_LEAST_FREQUENT_LOGIN = "least-freq-login"
+    """Keep the attributes of the user that has *least frequently logged* into Slack."""
+
     KEEP_NEWEST = "newest"
+    """Keep the attributes of the *most recently created* user account (in other words, the newest)."""
+
     KEEP_OLDEST = "oldest"
+    """Keep the attributes of the *least recently created* user account (in other words, the oldest)."""
+
     KEEP_MOST_RECENTLY_ACCESSED = "most-recent"
+    """Keep the attributes of the *most recently accessed* user account."""
+
     KEEP_LEAST_RECENTLY_ACCESSED = "least-recent"
+    """Keep the attributes of the *least recently accessed* user account."""
 
 
 UserMergeType = typing.Optional[typing.Union[str, UserMergeOptionsType]]
+"""
+This is a type to specify the different possibilities for merging user
+attributes in the :py:func:`user_merge` method. The values can either be
+taken from the enumeration class :py:class:`UserMergeOptionsType`, be a
+string, or be `None` (in which case a default decision will be made).
+"""
 
 
 _access_logs: typing.Optional[typing.List[dict]] = None
+"""
+Internal accesss logs cache for the currently logged-in Slack workspace.
+This cache is (re)loaded by :py:func:`_refresh_access_logs`, and is used
+by the following methods:
+
+   - :py:func:`user_access_logs`,
+   - :py:func:`user_access_count`,
+   - :py:func:`user_access_earliest`,
+   - :py:func:`user_access_latest`,
+   - :py:func:`user_merge`,
+
+and possibly other, protected, methods.
+"""
 
 
-def _refresh_access_logs(force_refresh: typing.Optional[bool] = None):
+def _refresh_access_logs(force_refresh: typing.Optional[bool] = None) -> typing.NoReturn:
+    """
+    Loads the internal access logs cache for the currently logged-in
+    Slack workspace. If the cache has already been loaded, this does
+    nothing, unless the parameter :py:data:`force_refresh` is set to
+    :py:data:`True`.
+
+    :param force_refresh: Flag determining whether to flush the cache
+    :type force_refresh: bool
+    """
     global _access_logs
     if _access_logs is None or (force_refresh is not None and force_refresh):
         _access_logs = slacktivate.slack.methods.team_access_logs()
@@ -84,7 +137,7 @@ def user_access_logs(
     :param user: A valid Slack user
     :type user: :py:class:`slacktivate.slack.classes.SlackUserTypes`
 
-    :param force_refresh: Flag deterrmining whether to flush the cache
+    :param force_refresh: Flag determining whether to flush the cache
     :type force_refresh: bool
 
     :return: A list of all available access logs for the user
@@ -117,7 +170,7 @@ def user_access_count(
         force_refresh: typing.Optional[bool] = None,
 ) -> int:
     """
-    Returns the number of times the user logged into Slack..
+    Returns the number of times the user logged into Slack.
 
     There is no way to access the logs randomly, therefore this method
     relies on a local cache of the full team access logs. This means that
@@ -130,7 +183,7 @@ def user_access_count(
     :param user: A valid Slack user
     :type user: :py:class:`slacktivate.slack.classes.SlackUserTypes`
 
-    :param force_refresh: Flag deterrmining whether to flush the cache
+    :param force_refresh: Flag determining whether to flush the cache
     :type force_refresh: bool
 
     :return: The total number of accesses a user has made
@@ -139,7 +192,7 @@ def user_access_count(
 
     # normalize user
     user = slacktivate.slack.classes.to_slack_user(user)
-    user_logins = user_access_logs(user=user)
+    user_logins = user_access_logs(user=user, force_refresh=force_refresh)
     if user is None or user_logins is None:
         return -1
 
@@ -151,15 +204,35 @@ def user_access_count(
     return total_accesses
 
 
-def _user_access_date_field(
+def _user_access_numeric_field(
         user: slacktivate.slack.classes.SlackUserTypes,
         date_field_name: str,
         comparator: typing.Callable[[int, int], int] = operator.lt,
+        force_refresh: typing.Optional[bool] = None,
 ) -> int:
+    """
+    Returns a numeric value (such as a count, or a Unix timestamp) computed
+    over the Slack access logs for a given user. This helper method is used
+    by :py:func:`user_access_earliest` and :py:func:`user_access_latest`.
+
+    :param user: A valid Slack user
+    :type user: :py:class:`slacktivate.slack.classes.SlackUserTypes`
+
+    :param date_field_name: The name of the field of the access logs that
+        should be analyzed (e.g., ``date_first``, ``date_last``, ``count``)
+    :type date_field_name: str
+
+    :param comparator: A binary method to compare two values
+
+    :param force_refresh: Flag determining whether to flush the cache
+    :type force_refresh: bool
+
+    :return: The computed number
+    """
 
     # normalize user
     user = slacktivate.slack.classes.to_slack_user(user)
-    user_logins = user_access_logs(user=user)
+    user_logins = user_access_logs(user=user, force_refresh=force_refresh)
     if user is None or user_logins is None:
         return -1
 
@@ -178,19 +251,59 @@ def _user_access_date_field(
     return best_access
 
 
-def user_access_earliest(user: slacktivate.slack.classes.SlackUserTypes) -> int:
-    return _user_access_date_field(
+def user_access_earliest(
+        user: slacktivate.slack.classes.SlackUserTypes,
+        force_refresh: typing.Optional[bool] = None,
+) -> int:
+    """
+    Returns the user's *earliest* recorded login to the Slack workspace.
+
+    Like the other methods related to access logs, such as
+    :py:func:`user_access_logs`, this method relies on an internal
+    cache that can be controlled with the parameter :py:data:`force_refresh`.
+
+    :param user: A valid Slack user
+    :type user: :py:class:`slacktivate.slack.classes.SlackUserTypes`
+
+    :param force_refresh: Flag determining whether to flush the cache
+    :type force_refresh: bool
+
+    :return: The Unix timestamp of the *earliest* recorded login for the user
+    """
+
+    return _user_access_numeric_field(
         user=user,
         date_field_name="date_first",
         comparator=operator.lt,
+        force_refresh=force_refresh,
     )
 
 
-def user_access_latest(user: slacktivate.slack.classes.SlackUserTypes) -> int:
-    return _user_access_date_field(
+def user_access_latest(
+        user: slacktivate.slack.classes.SlackUserTypes,
+        force_refresh: typing.Optional[bool] = None,
+) -> int:
+    """
+    Returns the user's *most recently* recorded login to the Slack workspace.
+
+    Like the other methods related to access logs, such as
+    :py:func:`user_access_logs`, this method relies on an internal
+    cache that can be controlled with the parameter :py:data:`force_refresh`.
+
+    :param user: A valid Slack user
+    :type user: :py:class:`slacktivate.slack.classes.SlackUserTypes`
+
+    :param force_refresh: Flag determining whether to flush the cache
+    :type force_refresh: bool
+
+    :return: The Unix timestamp of the *most recently* recorded login for the user
+    """
+
+    return _user_access_numeric_field(
         user=user,
         date_field_name="date_last",
         comparator=operator.gt,
+        force_refresh=force_refresh,
     )
 
 
@@ -201,15 +314,35 @@ def user_merge(
         merge_account: UserMergeType = None,
         merge_username: UserMergeType = None,
         merge_primary_email: UserMergeType = None,
+
+        force_refresh: typing.Optional[bool] = None,
 ) -> typing.Optional[slacktivate.slack.classes.SlackUser]:
     """
+    Merges two Slack users into one, combining the attributes using a set of
+    automated rules.
 
-    :param user_from:
-    :param user_to:
-    :param merge_account:
-    :param merge_username:
-    :param merge_primary_email:
-    :return:
+    :param user_from: A valid user
+    :type user_from: :py:class:`slacktivate.slack.classes.SlackUserTypes`
+
+    :param user_to: Another valid user
+    :type user_to: :py:class:`slacktivate.slack.classes.SlackUserTypes`
+
+    :param merge_account: Determines which account to keep;
+        by default keep the *oldest*, :py:attr:`UserMergeOptionsType.KEEP_OLDEST`
+    :type merge_account: :py:class:`UserMergeType`
+
+    :param merge_username: Determines which username to keep;
+        by default keep the *newest*, :py:attr:`UserMergeOptionsType.KEEP_NEWEST`
+    :type merge_username: :py:class:`UserMergeType`
+
+    :param merge_primary_email: Determines which primary email to keep;
+        by default keep the *newest*, :py:attr:`UserMergeOptionsType.KEEP_NEWEST`
+    :type merge_primary_email: :py:class:`UserMergeType`
+
+    :param force_refresh: Flag determining whether to flush the cache
+    :type force_refresh: bool
+
+    :return: If successful, the merged user, otherwise :py:data:`None`
     """
 
     user_from = slacktivate.slack.classes.to_slack_user(user_from)
@@ -222,6 +355,10 @@ def user_merge(
 
     if user_to is None:
         return user_from
+
+    # since we are making a lot of calls, if we want to refresh cache, only
+    # need to do it once
+    _refresh_access_logs(force_refresh=force_refresh)
 
     # merge case
 
