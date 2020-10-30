@@ -511,6 +511,7 @@ def groups_ensure(
 def channels_ensure(
         config: slacktivate.input.config.SlacktivateConfig,
         remove_unspecified_members: typing.Optional[bool] = None,
+        dry_run: bool = False,
 ) -> typing.Optional[typing.Dict[str, str]]:
 
     # refresh the user cache
@@ -527,6 +528,7 @@ def channels_ensure(
     channels_by_name = slacktivate.slack.methods.channels_list()
 
     channels_created = dict()
+    channels_modifications = dict()
 
     # iterate over all users in config
     for channel_def in config.channels:
@@ -535,7 +537,15 @@ def channels_ensure(
         if channel_name is None or channel_name == "":
             continue
 
+        channel_id = None
+
+        # compute whether channel is private
         channel_is_private = False if "private" not in channel_def else channel_def.get("private") == True
+
+        # initialize the modifications' entry for dry_run
+        channels_modifications[channel_name] = channels_modifications.get(channel_name, dict())
+
+        # loop
 
         existing_member_ids = set()
 
@@ -558,21 +568,39 @@ def channels_ensure(
                 existing_members
             ))
 
-        else:
-            # try to create the channel
-            try:
-                channel_id = slacktivate.slack.methods.channel_create(
-                    name=channel_name,
-                    is_private=channel_is_private,
-                )
-                channels_created[channel_name] = channel_id
-            except:
-                # probably already exists, but private or inaccessible to
-                # user (NOTE: handle this better, maybe log?)
-                continue
+            # store information
+            channels_modifications[channel_name]["id"] = channel_id
+            channels_modifications[channel_name]["exists"] = True
+            channels_modifications[channel_name]["created"] = False
+            channels_modifications[channel_name]["members_ids_existing"] = list(existing_member_ids)
 
-        if channel_id is None:
-            continue
+        else:
+            # store information
+            channels_modifications[channel_name]["exists"] = False
+            channels_modifications[channel_name]["created"] = False
+            channels_modifications[channel_name]["members_ids_existing"] = list()
+
+            if dry_run:
+                # to indicate in output why action was not executed
+                channels_modifications[channel_name]["dry_run"] = True
+
+            else:
+                # try to create the channel
+                try:
+                    channel_id = slacktivate.slack.methods.channel_create(
+                        name=channel_name,
+                        is_private=channel_is_private,
+                    )
+                    channels_created[channel_name] = channel_id
+
+                    # store information
+                    channels_modifications[channel_name]["id"] = channel_id
+                    channels_modifications[channel_name]["exists"] = True
+                    channels_modifications[channel_name]["created"] = True
+                except:
+                    # probably already exists, but private or inaccessible to
+                    # user (NOTE: handle this better, maybe log?)
+                    continue
 
         # compute user IDs of provided members
 
@@ -580,12 +608,25 @@ def channels_ensure(
             None.__ne__,
             map(
                 lambda user: _lookup_slack_user_id_by_email(user["email"]),
-                channel_def["users"]
+                channel_def.get("users", list())
             )))
 
         # users to add, users to remove
         member_ids_to_invite = list(provided_member_ids.difference(existing_member_ids))
         member_ids_to_kick = list(existing_member_ids.difference(provided_member_ids))
+
+        # store that information
+        channels_modifications[channel_name]["members_ids_to_invite"] = member_ids_to_invite
+        channels_modifications[channel_name]["member_ids_to_kick"] = member_ids_to_kick
+
+        # we computed the IDs to report the information back, but if `channel_id`
+        # is non-existent, means we did not successfully create the channel
+        if channel_id is None:
+            continue
+
+        # dry-run, we just record modifications not do them
+        if dry_run is not None and dry_run:
+            continue
 
         try:
             with slacktivate.slack.clients.managed_api() as client:
@@ -593,10 +634,13 @@ def channels_ensure(
                     channel=channel_id,
                     users=",".join(member_ids_to_invite),
                 )
+            channels_modifications[channel_name]["members_ids_added"] = member_ids_to_invite[:]
         except:
             pass
 
         if remove_unspecified_members:
+            member_ids_removed = []
+
             for member_id_to_kick in member_ids_to_kick:
                 try:
                     with slacktivate.slack.clients.managed_api() as client:
@@ -604,8 +648,11 @@ def channels_ensure(
                             channel=channel_id,
                             user=member_id_to_kick,
                         )
+                        member_ids_removed.append(member_id_to_kick)
                 except:
                     continue
 
-    return channels_created
+            channels_modifications[channel_name]["members_ids_removed"] = member_ids_removed
+
+    return channels_modifications
 
