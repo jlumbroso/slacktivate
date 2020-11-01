@@ -1,7 +1,7 @@
 # Slacktivate
 
 ![pytest](https://github.com/jlumbroso/slacktivate/workflows/pytest/badge.svg)
- [![codecov](https://codecov.io/gh/jlumbroso/slacktivate/branch/master/graph/badge.svg)](https://codecov.io/gh/jlumbroso/slacktivate)
+ [![codecov](https://codecov.io/gh/jlumbroso/slacktivate/branch/master/graph/badge.svg?token=RCZNE245ZZ)](https://codecov.io/gh/jlumbroso/slacktivate)
  [![Documentation Status](https://readthedocs.org/projects/slacktivate/badge/?version=latest)](https://slacktivate.readthedocs.io/en/latest/?badge=latest)
  [![Downloads](https://pepy.tech/badge/slacktivate)](https://pepy.tech/project/slacktivate)
  [![Run on Repl.it](https://repl.it/badge/github/jlumbroso/slacktivate)](https://repl.it/github/jlumbroso/slacktivate)
