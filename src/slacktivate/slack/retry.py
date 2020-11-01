@@ -37,7 +37,7 @@ is thrown by the Slack API or Slack SCIM API, but without a valid
 """
 
 
-def _give_up_or_retry_aux(status_code: int, headers: dict, data: dict = None) -> bool:
+def _do_we_give_up_aux(status_code: int, headers: dict, data: dict = None) -> bool:
 
     # first determine whether the exception is just rate-limiting (give up: False)
     # or something more serious (give up: True)
@@ -75,7 +75,7 @@ def _give_up_or_retry_aux(status_code: int, headers: dict, data: dict = None) ->
     return False
 
 
-def slack_api_give_up_or_retry(err: slack.errors.SlackApiError) -> bool:
+def slack_api_do_we_give_up(err: slack.errors.SlackApiError) -> bool:
     # The slack.errors.SlackApiError contains a SlackResponse object that has
     # the status code and headers we need
     #
@@ -84,17 +84,15 @@ def slack_api_give_up_or_retry(err: slack.errors.SlackApiError) -> bool:
     # https://github.com/slackapi/python-slackclient/blob/1a1f9d05e4653897ba4474a88621cc1482be19b1/slack/errors.py#L18-L33
 
     response: slack.web.slack_response.SlackResponse = err.response
-    print("saguor>>")
-    print(response)
-    print(response.data)
-    return _give_up_or_retry_aux(
+
+    return _do_we_give_up_aux(
         status_code=response.status_code,
         headers=response.headers,
         data=response.data,
     )
 
 
-def scim_api_give_up_or_retry(err: slack_scim.SCIMApiError) -> bool:
+def scim_api_do_we_give_up(err: slack_scim.SCIMApiError) -> bool:
     # The slack_scim.SCIMApiError contains two pieces of information that are useful here:
     # - the HTTP status code; if 429, then it indicates a rate limiting error
     # - the full HTTP headers; if it includes a "retry-after" header, then we can wait for that duration
@@ -103,21 +101,21 @@ def scim_api_give_up_or_retry(err: slack_scim.SCIMApiError) -> bool:
     # https://api.slack.com/scim#ratelimits
     # https://github.com/seratch/python-slack-scim/blob/4c088065b68b7c26c2d2ff7b1e6fad275e1bcd09/src/slack_scim/v1/errors.py#L25-L42
 
-    return _give_up_or_retry_aux(
+    return _do_we_give_up_aux(
         status_code=err.status,
         headers=err.headers,
     )
 
 
-def slack_give_up_or_retry(
+def slack_do_we_give_up(
         err: typing.Union[slack.errors.SlackApiError, slack_scim.SCIMApiError, Exception]
 ) -> bool:
 
     if isinstance(err, slack.errors.SlackApiError):
-        return slack_api_give_up_or_retry(err)
+        return slack_api_do_we_give_up(err)
 
     if isinstance(err, slack_scim.SCIMApiError):
-        return scim_api_give_up_or_retry(err)
+        return scim_api_do_we_give_up(err)
 
     # neither one of those exceptions, therefore we should fail
     return True
@@ -130,8 +128,12 @@ def slack_give_up_or_retry(
 
 slack_retry = backoff.on_exception(
     wait_gen=backoff.constant,
-    exception=slack_scim.SCIMApiError,
-    giveup=slack_give_up_or_retry
+
+    # multiple exceptions can be provided with a tuple
+    # https://docs.python.org/3/tutorial/errors.html#handling-exceptions
+    exception=(slack_scim.SCIMApiError, slack.errors.SlackApiError),
+
+    giveup=slack_do_we_give_up
 )
 """
 .. py:decorator:: @slack_retry
