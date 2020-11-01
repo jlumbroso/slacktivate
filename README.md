@@ -9,7 +9,7 @@
 
 
 Slacktivate is a Python library and Command-Line Interface
-to assist in the provisioning of a Slack workspace, using
+to assist in the provisioning and management of a Slack workspace, using
 both the Slack API and the Slack SCIM API.
 
 ## Prerequisites: Having Owner Access and Getting an API Token

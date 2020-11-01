@@ -109,6 +109,7 @@ def cli_repl(
 
             "user_patch": slacktivate.slack.methods.user_patch,
             "user_merge": slacktivate.macros.manage.user_merge,
+            "users_ensure": slacktivate.macros.provision.users_ensure,
             "users_update": slacktivate.macros.provision.users_update,
             "groups_ensure": slacktivate.macros.provision.groups_ensure,
             "channels_ensure": slacktivate.macros.provision.channels_ensure,
