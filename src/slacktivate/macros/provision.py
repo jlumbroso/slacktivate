@@ -12,6 +12,7 @@ import slacktivate.input.config
 import slacktivate.input.helpers
 import slacktivate.input.parsing
 import slacktivate.slack.classes
+import slacktivate.slack.clients
 import slacktivate.slack.methods
 
 
@@ -234,8 +235,8 @@ def users_list(
 
 def users_deactivate(
         config: slacktivate.input.config.SlacktivateConfig,
-        dry_run: bool = False,
         only_active: bool = False,
+        dry_run: bool = False,
 ) -> typing.Union[typing.List[slacktivate.slack.classes.SlackUser], typing.Tuple[int, int, int]]:
     """
     Deactivates all users that are not described in the provided :py:data:`config`
@@ -243,6 +244,7 @@ def users_deactivate(
 
     :param config: A :py:class:`SlacktivateConfig` object storing the compiled
         Slacktivate specification for this workspace
+    :param only_active: Flag to only update users that are currently active
     :param dry_run: Flag to only return users to deactivate, rather than deactivate them
 
     :return: If :py:data:`dry_run` is set to :py:data:`True`, then the list of
@@ -629,7 +631,7 @@ def channels_ensure(
             continue
 
         try:
-            with slacktivate.slack.clients.managed_api() as client:
+            with slacktivate.slack.clients.managed_api(patch_reply_exception=True) as client:
                 client.conversations_invite(
                     channel=channel_id,
                     users=",".join(member_ids_to_invite),
@@ -643,7 +645,7 @@ def channels_ensure(
 
             for member_id_to_kick in member_ids_to_kick:
                 try:
-                    with slacktivate.slack.clients.managed_api() as client:
+                    with slacktivate.slack.clients.managed_api(patch_reply_exception=True) as client:
                         client.conversations_kick(
                             channel=channel_id,
                             user=member_id_to_kick,

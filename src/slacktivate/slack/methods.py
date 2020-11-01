@@ -8,12 +8,14 @@ predictable syntax to do typical, elementary administrative operations on
 the logged-in Slack workspace.
 """
 
+import itertools
 import typing
 
 import slack
 import slack.errors
 import slack_scim
 
+import slacktivate.helpers.collections
 import slacktivate.slack.classes
 import slacktivate.slack.clients
 import slacktivate.slack.retry
@@ -317,6 +319,119 @@ def make_user_extra_fields_dictionary(
     return translated_extra_fields
 
 
+def _make_email_dictionary(
+        email: typing.Union[dict, str],
+        primary: typing.Optional[bool] = None,
+        description: typing.Optional[str] = None,
+) -> typing.Optional[dict]:
+    # ensure values like this:
+    # {
+    #     "primary": True,
+    #     "type": None,
+    #     "value": "email@domain.com",
+    # }
+
+    # set default value for `primary`
+    primary = primary if primary is not None else True
+
+    if isinstance(email, str) and "@" in email:
+        return {
+            "primary": primary,
+            "type": description,
+            "value": email,
+        }
+
+    elif isinstance(email, dict) and "value" in email:
+        return {
+            "primary": email.get("primary", primary),
+            "type": email.get("type", description),
+            "value": email.get("value"),
+        }
+
+    # couldn't figure out email
+    return
+
+
+def _get_email_list(data: typing.Optional[typing.Union[str, list, dict]]) -> typing.List[str]:
+    if data is None:
+        return []
+
+    if isinstance(data, str):
+        return [data]
+
+    if isinstance(data, dict) and "value" in data:
+        return [data.get("value")]
+
+    if isinstance(data, list):
+        return list(itertools.chain(*map(_get_email_list, data)))
+
+    return []
+
+
+def make_user_email_dictionary(
+        attributes: typing.Optional[dict] = None,
+        primary_email: typing.Optional[str] = None,
+        alternate_emails: typing.Optional[typing.Union[str, list]] = None,
+):
+
+    # MEA CULPA: Yes, this is some of the ugliest code I've ever written in
+    # my life. -_-
+
+    all_possible_emails = []
+
+    # process email from `primary_email`
+    if primary_email is not None:
+        temp_lst = _get_email_list(data=primary_email)
+        temp_email = slacktivate.helpers.collections.first_or_none(temp_lst)
+        if temp_email is not None:
+            all_possible_emails.append(temp_email)
+
+    # process the emails from `attributes`
+    if attributes is not None and ("email" in attributes or "emails" in attributes):
+        # email_obj ~ {
+        #     "primary": True,
+        #     "type": None,
+        #     "value": "email@domain.com",
+        # }
+        it = []
+
+        if "email" in attributes and isinstance(attributes.get("email"), str):
+            it.append(attributes.get("email"))
+            if primary_email is None:
+                primary_email = attributes.get("email")
+
+        if "emails" in attributes and isinstance(attributes.get("emails"), list):
+            it += attributes.get("emails")
+
+        for obj in it:
+            if isinstance(obj, dict) and "value" in obj:
+                if "primary" in obj and obj["primary"]:
+                    if primary_email is None:
+                        primary_email = obj["value"]
+                all_possible_emails.append(obj["value"])
+
+            elif isinstance(obj, str):
+                all_possible_emails.append(obj)
+
+    # process the emails from `alternate_emails`
+    alternate_emails = alternate_emails or attributes.get("alternate_emails")
+    if alternate_emails is not None:
+        all_possible_emails += _get_email_list(data=alternate_emails)
+
+    # filter duplicates
+    all_possible_emails = list(set(all_possible_emails))
+    if primary_email is not None and primary_email in all_possible_emails:
+        del all_possible_emails[all_possible_emails.index(primary_email)]
+
+    ret = list(map(lambda email: _make_email_dictionary(email=email, primary=False),
+                   all_possible_emails))
+
+    if primary_email is not None:
+        ret = [_make_email_dictionary(email=primary_email, primary=True)] + ret
+
+    return ret
+
+
 def make_user_dictionary(
         attributes: dict,
         include_naming: bool = True,
@@ -343,21 +458,25 @@ def make_user_dictionary(
         profile
     """
 
-    if attributes.get("email") is None:
+    if attributes.get("email") is None or type(attributes.get("email")) not in [str, list]:
         return
 
     user_name = attributes.get("userName")
     user_name = user_name or attributes.get("email").split("@")[0]
 
+    user_email_dictionary = make_user_email_dictionary(
+        attributes=attributes,
+        primary_email=attributes.get("email"),
+        alternate_emails=attributes.get("alternate_emails"),
+    )
+
     user_dict = {
         "userName": user_name,
-        "emails": [{
-            "primary": True,
-            "type": None,
-            "value": attributes.get("email"),
-        }],
+        "emails": user_email_dictionary,
         "active": True,
     }
+
+    # support for alternate emails
 
     if include_naming:
         user_dict.update({
