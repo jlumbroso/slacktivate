@@ -20,6 +20,7 @@ __author__ = "Jérémie Lumbroso <lumbroso@cs.princeton.edu>"
 
 __all__ = [
     "DEFAULT_SECONDS_TO_WAIT",
+    "slack_do_we_give_up",
     "slack_retry",
 ]
 
@@ -75,7 +76,7 @@ def _do_we_give_up_aux(status_code: int, headers: dict, data: dict = None) -> bo
     return False
 
 
-def slack_api_do_we_give_up(err: slack.errors.SlackApiError) -> bool:
+def _slack_api_do_we_give_up(err: slack.errors.SlackApiError) -> bool:
     # The slack.errors.SlackApiError contains a SlackResponse object that has
     # the status code and headers we need
     #
@@ -92,7 +93,7 @@ def slack_api_do_we_give_up(err: slack.errors.SlackApiError) -> bool:
     )
 
 
-def scim_api_do_we_give_up(err: slack_scim.SCIMApiError) -> bool:
+def _scim_api_do_we_give_up(err: slack_scim.SCIMApiError) -> bool:
     # The slack_scim.SCIMApiError contains two pieces of information that are useful here:
     # - the HTTP status code; if 429, then it indicates a rate limiting error
     # - the full HTTP headers; if it includes a "retry-after" header, then we can wait for that duration
@@ -112,10 +113,10 @@ def slack_do_we_give_up(
 ) -> bool:
 
     if isinstance(err, slack.errors.SlackApiError):
-        return slack_api_do_we_give_up(err)
+        return _slack_api_do_we_give_up(err)
 
     if isinstance(err, slack_scim.SCIMApiError):
-        return scim_api_do_we_give_up(err)
+        return _scim_api_do_we_give_up(err)
 
     # neither one of those exceptions, therefore we should fail
     return True

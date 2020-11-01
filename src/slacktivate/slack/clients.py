@@ -199,13 +199,21 @@ def api(
     )
 
 
-def managed_scim(token: typing.Optional[str] = None) -> typing.ContextManager[slack_scim.SCIMClient]:
-    return slacktivate.slack.exceptions.SlackExceptionHandler(
-        client=scim(token=token, update_global=False)
+def managed_scim(
+        token: typing.Optional[str] = None,
+        patch_reply_exception: bool = True,
+) -> typing.ContextManager[slack_scim.SCIMClient]:
+    return slacktivate.slack.exceptions.SlackExceptionHandler.wrap(
+        client=scim(token=token, update_global=False),
+        patch_reply_exception=patch_reply_exception,
     )
 
 
-def managed_api(token: typing.Optional[str] = None) -> typing.ContextManager[slack.WebClient]:
-    return slacktivate.slack.exceptions.SlackExceptionHandler(
-        client=api(token=token, update_global=False)
+def managed_api(
+        token: typing.Optional[str] = None,
+        patch_reply_exception: bool = True,
+) -> typing.ContextManager[slack.WebClient]:
+    return slacktivate.slack.exceptions.SlackExceptionHandler.wrap(
+        client=api(token=token, update_global=False),
+        patch_reply_exception=patch_reply_exception,
     )
