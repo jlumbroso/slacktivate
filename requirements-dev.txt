@@ -1,4 +1,4 @@
-aiohttp==3.7.1
+aiohttp==3.7.2
 alabaster==0.7.12
 appdirs==1.4.4
 async-timeout==3.0.1
@@ -23,7 +23,7 @@ idna==2.10
 imagesize==1.2.0
 jinja2==2.11.2
 markupsafe==1.1.1
-more-itertools==8.5.0
+more-itertools==8.6.0
 multidict==5.0.0
 packaging==20.4
 pbr==5.5.1
@@ -58,7 +58,7 @@ sphinxcontrib-htmlhelp==1.0.3
 sphinxcontrib-jsmath==1.0.1
 sphinxcontrib-qthelp==1.0.3
 sphinxcontrib-serializinghtml==1.1.4
-toml==0.10.1
+toml==0.10.2
 tomlkit==0.7.0
 tox==3.20.1
 tox-poetry-dev-dependencies==0.0.5
