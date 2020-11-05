@@ -12,6 +12,44 @@ Slacktivate is a Python library and Command-Line Interface
 to assist in the provisioning and management of a Slack workspace, using
 both the Slack API and the Slack SCIM API.
 
+## Introduction
+
+Slack is a wonderful platform for chat, with an extensive API that allows for
+many powerful integrations. But the Slack client currently (in its most frequently
+available interface) does not provide any support for batch operations.
+
+Slacktivate is a powerful tool that allows you to specify the users, group
+memberships and channels in a YAML specification file, and to have the tool
+automatically synchronize this specification with the Slack workspace.
+
+Below is some context to explain why I created this tool.
+
+### Batch managing users in channels
+
+As an example:
+- users [can only be added to a channel one-by-one](https://slack.com/help/articles/201980108-Add-people-to-a-channel),
+- users can only be removed from a channel one-by-one,
+
+![Slack modal to add users to a channel as of October 2020](docs/source/_static/slack-screenshots/add-user-to-channel-modal.png)
+
+and when you are managing a Slack workspace with hundreds of users, this can
+become a bottleneck of operations very quickly. Slack is actively trying to
+address this point, but so far, is not really making a difference---[the
+channel manager that was recently introduced](https://slack.com/help/articles/360047512554-Use-channel-management-tools)
+still only provides the same modal to add users, and no additional options to remove users.
+
+This problem exists throughout Slack. Beyond the membership of channels, this
+issue exists also with the membership of the workspace, of groups, and so on.
+
+Part of the issue is that Slack Enterprise Grid product relies on a
+company's existing directory solution to address these needs; but this is
+of no use to the many teams that are finding success with a lower tier of
+the service. 
+
+### The solution: Automating
+
+<to be written>
+
 ## Prerequisites: Having Owner Access and Getting an API Token
 
 In order to use the SCIM API, you need to be an owner of the workspace, and obtain an API token with `admin` scope.
