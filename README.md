@@ -10,7 +10,20 @@
 
 Slacktivate is a Python library and Command-Line Interface
 to assist in the provisioning and management of a Slack workspace, using
-both the Slack API and the Slack SCIM API.
+both the Slack API and the Slack SCIM API:
+
+- Write a YAML specifications to describe your users, channels and groups,
+  then have Slacktivate set up your workspace with no manual intervention.
+  
+- Use the self-documented Slacktivate REPL to immediately do batch operations
+  on your Slack workspace and build new powerful macros.
+
+- Robust, Pythonic wrapper to the Slack API and Slack SCIM API clients,
+  able to abstract some of the quirks of the API—as well as able to handle
+  typical error management (such as rate limiting) transparently.
+  
+- Find everything you need to be a Slack power user in one place, rather
+  than spread to a microcosm of evolving documentations.
 
 ## Introduction
 
