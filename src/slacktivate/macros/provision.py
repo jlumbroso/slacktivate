@@ -32,7 +32,13 @@ __all__ = [
 ]
 
 
+# Submodule constants
+
 MAX_USER_LIMIT = 1000
+"""
+The Slack API and Slack SCIM API maximum limit when returning paginated
+results (of users, channels, etc.).
+"""
 
 SLACK_BOTS_DOMAIN = "@slack-bots.com"
 """
@@ -41,6 +47,17 @@ is useful to filter out these bots when listing users, for instance, with
 :py:func:`users_list`.
 """
 
+DRY_RUN_BY_DEFAULT = False
+"""
+Global flag to indicate whether operations in this module should be
+dry-runs by default or not. If this flag is set to :py:data:`True`,
+all operations will return changes that will be made but will not
+actually carry them out unless the argument ``dry_run=True`` is
+provided the methods in question.
+"""
+
+
+# Submodule global variables
 
 _users_cache_by_email: typing.Optional[typing.Dict[str, slacktivate.slack.classes.SlackUser]] = None
 """Internal cache of the users, indexed by their *primary email*, in the
@@ -53,8 +70,9 @@ currently logged-in Slack workspace, to speed up queries."""
 
 def _refresh_users_cache() -> typing.NoReturn:
     """
-
-    :return:
+    Refreshes the two global internal caches of users (:py:attr:`_users_cache_by_email`
+    and :py:attr:`_users_cache_by_id`) that this module uses to speed up queries
+    over users and avoid hitting rate-limiting quotas too frequently.
     """
     global _users_cache_by_email, _users_cache_by_id
 
@@ -81,6 +99,26 @@ def _lookup_slack_user_by_email(
         email: str,
         refresh: typing.Optional[bool] = None,
 ) -> typing.Optional[slacktivate.slack.classes.SlackUser]:
+    """
+    Returns a :py:class:`slacktivate.slack.classes.SlackUser` object
+    representing the user associated with the provided :py:data:`email`
+    in the currently logged-in Slack workspace, if such a user can be
+    found.
+
+    This method uses an internal caching mechanism that can be
+    bypassed with the parameter :py:data:`refresh` or by calling the
+    internal method :py:func:`_refresh_users_cache`.
+
+    :param email: An email address to lookup
+    :type email: :py:class:`str`
+
+    :param refresh: Flag to indicate whether the cache should be refreshed
+        before looking up the email address
+    :type refresh: :py:class:`bool`
+
+    :return: The user associated with the email, or :py:data:`None`
+    :rtype: :py:class:`slacktivate.slack.classes.SlackUser` or :py:data:`None`
+    """
 
     if _users_cache_by_email is None or (refresh is not None and refresh):
         _refresh_users_cache()
@@ -96,6 +134,25 @@ def _lookup_slack_user_id_by_email(
         email: str,
         refresh: typing.Optional[bool] = None,
 ) -> typing.Optional[str]:
+    """
+    Returns a Slack user ID representing the user associated with the
+    provided :py:data:`email` in the currently logged-in Slack workspace,
+    if such a user can be found.
+
+    This method uses an internal caching mechanism that can be
+    bypassed with the parameter :py:data:`refresh` or by calling the
+    internal method :py:func:`_refresh_users_cache`.
+
+    :param email: An email address to lookup
+    :type email: :py:class:`str`
+
+    :param refresh: Flag to indicate whether the cache should be refreshed
+        before looking up the email address
+    :type refresh: :py:class:`bool`
+
+    :return: The Slack user ID associated with the email, or :py:data:`None`
+    :rtype: :py:class:`str` or :py:data:`None`
+    """
 
     user = _lookup_slack_user_by_email(
         email=email,
@@ -109,6 +166,26 @@ def _lookup_slack_user_by_id(
         user_id: str,
         refresh: typing.Optional[bool] = None,
 ) -> typing.Optional[slacktivate.slack.classes.SlackUser]:
+    """
+    Returns a :py:class:`slacktivate.slack.classes.SlackUser` object
+    representing the user associated with the provided Slack user ID
+    in the currently logged-in Slack workspace, if such a user can be
+    found.
+
+    This method uses an internal caching mechanism that can be
+    bypassed with the parameter :py:data:`refresh` or by calling the
+    internal method :py:func:`_refresh_users_cache`.
+
+    :param user_id: A valid Slack user ID
+    :type user_id: :py:class:`str`
+
+    :param refresh: Flag to indicate whether the cache should be refreshed
+        before looking up the Slack user ID
+    :type refresh: :py:class:`bool`
+
+    :return: The user associated with the Slack user ID, or :py:data:`None`
+    :rtype: :py:class:`slacktivate.slack.classes.SlackUser` or :py:data:`None`
+    """
 
     if _users_cache_by_id is None or (refresh is not None and refresh):
         _refresh_users_cache()
@@ -121,6 +198,20 @@ def _lookup_slack_user_by_id(
 def _iterate_emails(
         refresh: typing.Optional[bool] = None
 ) -> typing.KeysView[str]:
+    """
+    Returns an iterator over all the (primary) emails of the existing users
+    in the currently logged-in Slack workspace.
+
+    This method uses an internal caching mechanism that can be
+    bypassed with the parameter :py:data:`refresh` or by calling the
+    internal method :py:func:`_refresh_users_cache`.
+
+    :param refresh: Flag to indicate whether the cache should be refreshed
+    :type refresh: :py:class:`bool`
+
+    :return: An iterator over the primary email addresses
+    """
+
     if _users_cache_by_email is None or (refresh is not None and refresh):
         _refresh_users_cache()
 
@@ -130,6 +221,20 @@ def _iterate_emails(
 def _iterate_email_and_user(
         refresh: typing.Optional[bool] = None
 ) -> typing.ItemsView[str, slacktivate.slack.classes.SlackUser]:
+    """
+    Returns an iterator over all pairs of ``(primary email, user object)``
+    of the existing users in the currently logged-in Slack workspace.
+
+    This method uses an internal caching mechanism that can be
+    bypassed with the parameter :py:data:`refresh` or by calling the
+    internal method :py:func:`_refresh_users_cache`.
+
+    :param refresh: Flag to indicate whether the cache should be refreshed
+    :type refresh: :py:class:`bool`
+
+    :return: An iterator over pairs of primary email address and user object
+    """
+
     if _users_cache_by_email is None or (refresh is not None and refresh):
         _refresh_users_cache()
 
@@ -139,6 +244,20 @@ def _iterate_email_and_user(
 def _iterate_user_id_and_user(
         refresh: typing.Optional[bool] = None
 ) -> typing.ItemsView[str, slacktivate.slack.classes.SlackUser]:
+    """
+    Returns an iterator over all pairs of ``(Slack user ID, user object)``
+    of the existing users in the currently logged-in Slack workspace.
+
+    This method uses an internal caching mechanism that can be
+    bypassed with the parameter :py:data:`refresh` or by calling the
+    internal method :py:func:`_refresh_users_cache`.
+
+    :param refresh: Flag to indicate whether the cache should be refreshed
+    :type refresh: :py:class:`bool`
+
+    :return: An iterator over pairs of Slack user ID and user object
+    """
+
     if _users_cache_by_id is None or (refresh is not None and refresh):
         _refresh_users_cache()
 
@@ -156,6 +275,14 @@ def users_iterate(
 ]:
     """
     Returns an iterator over the existing users in the Slack workspace.
+
+    This method uses an internal caching mechanism that can be
+    bypassed with the parameter :py:data:`refresh` or by calling the
+    internal method :py:func:`_refresh_users_cache`.
+
+    This method is implemented using a collection of related internal
+    methods, and should be the main mechanism by which to iterate over
+    users.
 
     :param only_active: Flag to only return active users
     :param only_email: Flag to iterate over emails, not ``(email, user)`` pairs
@@ -206,6 +333,14 @@ def users_list(
     """
     Returns a list (or dictionary) of the existing users in the Slack workspace.
 
+    This method uses an internal caching mechanism that can be
+    bypassed with the parameter :py:data:`refresh` or by calling the
+    internal method :py:func:`_refresh_users_cache`.
+
+    This method is implemented using a collection of related internal
+    methods, and should be the main mechanism by which to iterate over
+    users.
+
     :param only_active: Flag to only return active users
     :param only_email: Flag to iterate over emails, not ``(email, user)`` pairs
     :param no_bots: Flag to filter out bot users
@@ -245,10 +380,13 @@ def users_deactivate(
     :param config: A :py:class:`SlacktivateConfig` object storing the compiled
         Slacktivate specification for this workspace
     :param only_active: Flag to only update users that are currently active
-    :param dry_run: Flag to only return users to deactivate, rather than deactivate them
+    :param dry_run: Flag to only return users to be deactivated, rather than
+        taking the action of deactivating them
 
     :return: If :py:data:`dry_run` is set to :py:data:`True`, then the list of
-        :py:class:`SlackUser` of the users to be deactivated; otherwise a t
+        :py:class:`SlackUser` of the users to be deactivated; otherwise a tuple
+        summarizing the number of users that were examined, that were to be
+        deactivated, and that were successfully deactivated
     """
 
     # refresh the user cache
@@ -305,7 +443,30 @@ def users_ensure(
         config: slacktivate.input.config.SlacktivateConfig,
         dry_run: bool = False,
         iterator_wrapper: typing.Optional[typing.Callable[[typing.Iterator], typing.Iterator]] = None,
-) -> typing.Union[typing.Dict[str, typing.Dict[str, typing.Any]], typing.Dict[str, slacktivate.slack.classes.SlackUser]]:
+) -> typing.Union[
+    typing.Dict[str, typing.Dict[str, typing.Any]],
+    typing.Dict[str, slacktivate.slack.classes.SlackUser]
+]:
+    """
+    Ensures that all users specified by the provided Slackativate configuration,
+    :py:data:`config`, have been provisioned and are active in the Slack workspace.
+
+    This method does nothing to deactivate users that are not specified in the
+    configuration---this is handled by a separate method, :py:func:`users_deactivate`.
+
+    :param config: A :py:class:`SlacktivateConfig` object storing the compiled
+        Slacktivate specification for this workspace
+    :param dry_run: Flag to only return users to be created, rather than taking
+        the action of creating them
+    :param iterator_wrapper: Optional iterator wrapper, to post-process the pairs
+        of ``(email, user attributes)`` in some way before that information is
+        used to create users
+
+    :return: If :py:attr:`dry_run` is set to :py:data:`True`, returns a dictionary
+        mapping primary emails to the Slack payload that will be used to create
+        the user; otherwise, returns a dictionary mapping emails to the created
+        user objects
+    """
 
     # refresh the user cache
     _refresh_users_cache()
@@ -366,6 +527,30 @@ def users_update(
         dry_run: bool = False,
         iterator_wrapper: typing.Optional[typing.Callable[[typing.Iterator], typing.Iterator]] = None,
 ) -> typing.Dict[str, slacktivate.slack.classes.SlackUser]:
+    """
+    Updates the profile information of users specified by the provided
+    Slackativate configuration, :py:data:`config`, of which the accounts have
+    already been created.
+
+    This method does not create new users (which can be done with
+    :py:func:`users_ensure`) or deactivate existing users (which can be done
+    with :py:func:`users_deactivate`), it only modifies profile attributes.
+
+    :param config: A :py:class:`SlacktivateConfig` object storing the compiled
+        Slacktivate specification for this workspace
+    :param overwrite_name: Flag to determine whether to allow this method to
+        overwrite customized names set by the user
+    :param overwrite_image: Flag to determine whether to allow this method to
+        overwrite customized profile images set by users
+    :param dry_run: Flag to only return users whose profile will be modified,
+        rather than taking the action of modifying them
+    :param iterator_wrapper: Optional iterator wrapper, to post-process the pairs
+        of ``(email, user attributes)`` in some way before that information is
+        used to update user profiles
+
+    :return: A dictionary of mapping primary emails to the user objects for
+        the modified users
+    """
 
     # refresh the user cache
     _refresh_users_cache()
@@ -376,7 +561,7 @@ def users_update(
     if iterator_wrapper is None:
         iterator_wrapper = (lambda x: x)
 
-    # NOTE: make the dry run return something
+    # FIXME: improve dry-run
     if dry_run:
         return {}
 
@@ -471,6 +656,7 @@ def users_update(
 def groups_ensure(
         config: slacktivate.input.config.SlacktivateConfig,
         remove_unspecified_members: typing.Optional[bool] = None,
+        dry_run: bool = False,
 ) -> typing.Dict[str, slacktivate.slack.classes.SlackGroup]:
 
     # refresh the user cache
@@ -484,6 +670,10 @@ def groups_ensure(
         )
 
     groups_created = dict()
+
+    # FIXME: improve dry-run
+    if dry_run:
+        return dict()
 
     # iterate over all users in config
     for group_def in config.groups:

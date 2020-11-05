@@ -4,7 +4,6 @@ This submodule contains a number of high-level macros that assist
 in complicated, multi-step tasks to be applied on Slack objects.
 """
 
-import datetime
 import enum
 import operator
 import typing
