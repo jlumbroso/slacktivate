@@ -4,9 +4,13 @@
 # See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
 
 # Required
+
 version: 2
 
-# Set the version of Python and requirements required to build your docs
+# Ensure the documentation is built using an appropriate version of Python
+# and the right requirements (Slacktivate requires Py3.8 at minimum because
+# of the use of TypedDict among other things)
+
 python:
   version: 3.8
   install:
