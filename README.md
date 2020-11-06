@@ -25,7 +25,31 @@ both the Slack API and the Slack SCIM API:
 - Find everything you need to be a Slack power user in one place, rather
   than spread to a microcosm of evolving documentations.
 
-## Example
+## Installation
+
+The package is available on PyPI as `slacktivate` and so is available the
+usual way, i.e., `pip install slacktivate`; in addition to the Python package,
+this should also install a CLI binary that is runnable, called `slacktivate`:
+
+```
+$ slacktivate --help
+Usage: slacktivate [OPTIONS] COMMAND [ARGS]...
+
+Options:
+  --token $SLACK_TOKEN  Slack API token (requires being an owner or admin).
+  --spec SPEC           Provide the specification for the Slack workspace.
+  -y, --dry-run         Do not actually perform the action.
+  --version             Show the version and exit.
+  --help                Show this message and exit.
+
+Commands:
+  list      Lists any type of object defined in the provided specification...
+  repl      A Python REPL with the Slacktivate package, and Slack clients...
+  users     Sub-command for operations on Slack users (e.g.: activate,...
+  validate  Validate the configuration file SPEC
+```
+
+## Specification Example
 
 The following is an example of specification for a workspace, with the user
 information (name, emails, perhaps additional profile information) stored here
