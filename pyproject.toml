@@ -42,6 +42,7 @@ commands =
 
 [tool.poetry.dependencies]
 python = "^3.8"
+ipython = {version = "^7.19.0", extras = ["ipython"]}
 slack-scim = "^1.1.0"           # MIT License (as of 2020-09-29)
 slackclient = "^2.8.0"          # MIT License (as of 2020-09-29)
 python-dotenv = "^0.14.0"       # BSD License (as of 2020-09-29)

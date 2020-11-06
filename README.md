@@ -25,6 +25,68 @@ both the Slack API and the Slack SCIM API:
 - Find everything you need to be a Slack power user in one place, rather
   than spread to a microcosm of evolving documentations.
 
+## Example
+
+The following is an example of specification for a workspace, with the user
+information (name, emails, perhaps additional profile information) stored here
+in external CSV files:
+```yaml
+vars:
+  "TERM": "2020-Q4"
+
+users:
+
+  - file: "input/{{ vars.TERM }}_managers*.csv"
+    sort: "newest"
+    type: "csv"
+    key: "{{ email }}"
+    fields:
+      "type": ["manager", "employee"]
+
+      # Slack normal fields
+      "givenName": "{{ first }}"
+      "familyName": "{{ last }}"
+      "userName": "{{ email.split('@')[0] }}"
+
+  - file: "input/{{ vars.TERM }}_associates*.csv"
+    sort: "newest"
+    type: "csv"
+    key: "{{ email }}"
+    fields:
+      "type": ["employee"]
+
+      # Slack normal fields
+      "givenName": "{{ first }}"
+      "familyName": "{{ last }}"
+      "userName": "{{ email.split('@')[0] }}"
+
+settings:
+  slack_token: "<slack-token>"
+  keep_customized_photos: true
+  keep_customized_name: true
+  extend_group_memberships: false
+  extend_channel_memberships: false
+  alternate_emails: "./output/alternate-emails.txt"
+
+groups:
+  - name: "managers"
+    filter: "$.where('manager' in $.type)"
+
+  - name: "employees"
+    filter: "$.where('employee' in $.type)"
+
+channels:
+  - name: "managers-only"
+    private: true
+    groups: ["manager"]
+
+  - name: "announcements"
+    permissions: "admin"
+
+  - name: "water-cooler"
+    groups: ["manager", "employee"]
+```
+
 ## Introduction
 
 Slack is a wonderful platform for chat, with an extensive API that allows for
@@ -59,7 +121,7 @@ company's existing directory solution to address these needs; but this is
 of no use to the many teams that are finding success with a lower tier of
 the service. 
 
-### The solution: Automating
+### The solution: Automating the process
 
 <to be written>
 
