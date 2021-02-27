@@ -10,6 +10,7 @@ import click_spinner
 import jinja2
 
 import slacktivate.__version__
+import slacktivate.cli.commands.users
 import slacktivate.cli.helpers
 import slacktivate.cli.logo
 import slacktivate.helpers.dict_serializer
@@ -46,8 +47,6 @@ except ImportError:
 # channels synchronize
 # channels invite --channel "#126-grading-notifications" --group ta126
 # validate
-
-
 
 
 @slacktivate.cli.helpers.cli_root
@@ -124,7 +123,6 @@ def cli_repl(
     )
 
 
-
 @cli.group(name="list")
 @click.pass_context
 def cli_list(ctx):
@@ -137,53 +135,8 @@ def cli_list(ctx):
     pass
 
 
-@cli_list.command(name="users")
-@slacktivate.cli.helpers.cli_arg_spec
-@slacktivate.cli.helpers.cli_opt_output_format
-@click.pass_context
-def list_users(
-        ctx: slacktivate.cli.helpers.AbstractSlacktivateCliContext,
-        spec: typing.Optional[io.BufferedReader],
-        format: slacktivate.cli.helpers.OutputFormatType,
-):
-    """
-    Provide a list of all the users contained in SPEC.
-    """
-    if spec is not None:
-        ctx.obj.set_spec_file(spec_file=spec)
+list_users = cli_list.command(name="users")(slacktivate.cli.commands.users.users_list)
 
-    with click_spinner.spinner(stream=sys.stderr):
-        sc_obj = slacktivate.input.config.SlacktivateConfig.from_specification(
-            config_data=ctx.obj.specification,
-        )
-
-    format = format.lower()
-
-    if format == "term":
-        click.echo("\n".join(list(map(lambda x: "{}".format(x), sc_obj.users.keys()))))
-
-    elif format == "csv":
-
-        # NOTE: fix because comma can't (yet) handle missing fields
-        lst = list(map(slacktivate.helpers.dict_serializer.to_flat_dict, sc_obj.users.values()))
-        lst_ext = slacktivate.helpers.dict_serializer.add_missing_dict_fields(lst)
-
-        import comma
-        click.echo(comma.dumps(lst_ext))
-
-    elif format == "json":
-        import json
-        click.echo(json.dumps(
-            obj=sc_obj.users,
-            indent=4,
-        ))
-
-
-
-
-
-
-import slacktivate.macros.provision
 
 @cli.group(name="users")
 @click.pass_context
@@ -194,43 +147,10 @@ def cli_users(ctx):
     pass
 
 
-@cli_users.command(name="activate")
-@slacktivate.cli.helpers.cli_arg_spec
-@slacktivate.cli.helpers.cli_opt_dry_run
-@click.pass_context
-def users_activate(
-        ctx: slacktivate.cli.helpers.AbstractSlacktivateCliContext,
-        spec: typing.Optional[io.BufferedReader],
-        dry_run: bool,
-):
-    """
-    Provide a list of all the users contained in SPEC.
-    """
-    if spec is not None:
-        ctx.obj.set_spec_file(spec_file=spec)
-
-    if dry_run:
-        ctx.obj.activate_dry_run()
-
-    ctx.obj.compile_specification()
-
-    ctx.obj.login()
-
-    # MAIN EVENT
-    users_created = slacktivate.macros.provision.users_ensure(
-        config=ctx.obj.config,
-        dry_run=ctx.obj.dry_run,
-    )
-
-    print(users_created)
-
-    click.echo("DONE!")
-
-
-
-
-
-
+users_activate = cli_users.command(name="activate")(slacktivate.cli.commands.users.users_activate)
+users_deactivate = cli_users.command(name="deactivate")(slacktivate.cli.commands.users.users_deactivate)
+users_list = cli_users.command(name="list")(slacktivate.cli.commands.users.users_list)
+#users_synchronize = cli_users.command(name="synchronize")(slacktivate.cli.commands.users.users_synchronize)
 
 
 @cli.command()

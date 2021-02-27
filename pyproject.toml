@@ -57,7 +57,7 @@ click = "^7.1.2"                # BSD License (as of 2020-09-29)
 click_help_colors = "^0.8"      # MIT License (as of 2020-09-29)
 click_spinner = "^0.1.10"       # MIT License (as of 2020-09-29)
 click-option-group = "^0.5.1"   # BSD License (as of 2020-09-29)
-#loguru = "^0.5.3"              # MIT License (as of 2020-09-29)
+loguru = "^0.5.3"               # MIT License (as of 2020-09-29)
 tqdm = "^4.49.0"                # MPL 2.0 License (as of 2020-09-29)
 
 [tool.poetry.dev-dependencies]

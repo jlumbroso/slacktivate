@@ -372,7 +372,7 @@ def users_deactivate(
         config: slacktivate.input.config.SlacktivateConfig,
         only_active: bool = False,
         dry_run: bool = False,
-) -> typing.Union[typing.List[slacktivate.slack.classes.SlackUser], typing.Tuple[int, int, int]]:
+) -> typing.Tuple[typing.List[slacktivate.slack.classes.SlackUser], typing.Tuple[int, int, int]]:
     """
     Deactivates all users that are not described in the provided :py:data:`config`
     parameter of type :py:class:`SlacktivateConfig`.
@@ -423,19 +423,27 @@ def users_deactivate(
 
     # if dry-run, return list
     if dry_run:
-        return users_to_deactivate
+        return (
+            users_to_deactivate,
+            (0, 0, 0)
+        )
 
     # now deactivate all at once
     deactivated_count = 0
 
+    users_deactivated = []
     for user in users_to_deactivate:
         if slacktivate.slack.methods.user_deactivate(user):
+            users_deactivated.append(user)
             deactivated_count += 1
 
     return (
-        len(_iterate_email_and_user()),
-        len(users_to_deactivate),
-        deactivated_count,
+        users_deactivated,
+        (
+            len(_iterate_email_and_user()),
+            len(users_to_deactivate),
+            deactivated_count,
+        )
     )
 
 
