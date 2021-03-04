@@ -815,6 +815,9 @@ def channels_ensure(
         member_ids_to_invite = list(provided_member_ids.difference(existing_member_ids))
         member_ids_to_kick = list(existing_member_ids.difference(provided_member_ids))
 
+        if not remove_unspecified_members:
+            member_ids_to_kick = []
+
         # store that information
         channels_modifications[channel_name]["members_ids_to_invite"] = member_ids_to_invite
         channels_modifications[channel_name]["member_ids_to_kick"] = member_ids_to_kick
@@ -838,7 +841,7 @@ def channels_ensure(
         except:
             pass
 
-        if remove_unspecified_members:
+        if dry_run is None or not dry_run:
             member_ids_removed = []
 
             for member_id_to_kick in member_ids_to_kick:
