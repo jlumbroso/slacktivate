@@ -1,30 +1,30 @@
 [tool.poetry]
-name = "slacktivate"
-version = "0.2.19"
-description = "Slacktivate is a Python library and Command-Line Interface to assist in the provisioning and management of a Slack workspace."
 authors = ["Jérémie Lumbroso <lumbroso@cs.princeton.edu>"]
-license = "LGPL-3.0-or-later"
-readme = "README.md"
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Office/Business",
+]
+description = "Slacktivate is a Python library and Command-Line Interface to assist in the provisioning and management of a Slack workspace."
 homepage = "https://github.com/jlumbroso/slacktivate"
-repository = "https://github.com/jlumbroso/slacktivate"
 include = [
-    "README.md",
+  "README.md",
 ]
 keywords = [
-    "Slack",
-    "user provisioning",
-    "Slack API",
-    "Slack SCIM API",
-    "Slack configuration",
+  "Slack",
+  "user provisioning",
+  "Slack API",
+  "Slack SCIM API",
+  "Slack configuration",
 ]
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Office/Business",
-]
+license = "LGPL-3.0-or-later"
+name = "slacktivate"
+readme = "README.md"
+repository = "https://github.com/jlumbroso/slacktivate"
+version = "0.2.20"
 
 [tool.tox]
 legacy_tox_ini = """
@@ -41,48 +41,48 @@ commands =
 """
 
 [tool.poetry.dependencies]
-python = "^3.8"
-ipython = {version = "^7.19.0", extras = ["ipython"]}
-slack-scim = "^1.1.0"           # MIT License (as of 2020-09-29)
-slackclient = "^2.8.0"          # MIT License (as of 2020-09-29)
-python-dotenv = "^0.14.0"       # BSD License (as of 2020-09-29)
-backoff = "^1.10.0"             # MIT License (as of 2020-09-29)
-Pillow = "9.0.1"               # PIL Software License (as of 2020-09-29)
-requests = "^2.24.0"            # Apache Software License (Apache 2.0) (as of 2020-09-29)
-pyyaml = "^5.3.1"               # MIT License (as of 2020-09-29)
-jinja2 = "^2.11.2"              # BSD License (as of 2020-09-29)
-yaql = "^1.1.3"                 # Apache Software License (as of 2020-09-29)
-comma = "^0.5.3"                # LGPLv3 (as of 2020-09-29)
-click = "^7.1.2"                # BSD License (as of 2020-09-29)
-click_help_colors = "^0.8"      # MIT License (as of 2020-09-29)
-click_spinner = "^0.1.10"       # MIT License (as of 2020-09-29)
-click-option-group = "^0.5.1"   # BSD License (as of 2020-09-29)
-loguru = "^0.5.3"               # MIT License (as of 2020-09-29)
-tqdm = "^4.49.0"                # MPL 2.0 License (as of 2020-09-29)
+Pillow = "9.0.1" # PIL Software License (as of 2020-09-29)
+backoff = "^1.10.0" # MIT License (as of 2020-09-29)
+click = "^7.1.2" # BSD License (as of 2020-09-29)
+click-option-group = "^0.5.1" # BSD License (as of 2020-09-29)
+click_help_colors = "^0.8" # MIT License (as of 2020-09-29)
+click_spinner = "^0.1.10" # MIT License (as of 2020-09-29)
+comma = "^0.5.3" # LGPLv3 (as of 2020-09-29)
+ipython = {version = "^7.19.0", extras = ["ipython"]} 
+jinja2 = "^2.11.2" # BSD License (as of 2020-09-29)
+loguru = "^0.5.3" # MIT License (as of 2020-09-29)
+python = "^3.8" 
+python-dotenv = "^0.14.0" # BSD License (as of 2020-09-29)
+pyyaml = "^5.3.1" # MIT License (as of 2020-09-29)
+requests = "^2.24.0" # Apache Software License (Apache 2.0) (as of 2020-09-29)
+slack-scim = "^1.1.0" # MIT License (as of 2020-09-29)
+slackclient = "^2.8.0" # MIT License (as of 2020-09-29)
+tqdm = "^4.49.0" # MPL 2.0 License (as of 2020-09-29)
+yaql = "^2.0.0" # Apache Software License (as of 2020-09-29)
 
 # need to pine these versions to avoid critical vulnerabilities
-aiohttp = "^3.7.4"              # Apache Software License 2.0 (as of 2020-12-10)
-urllib3 = "^1.26.5"             # MIT License (as of 2020-03-12)
-MarkupSafe = "2.0.1"            # BSD 3.0 License (as of 2019-02-23)
+MarkupSafe = "2.0.1" # BSD 3.0 License (as of 2019-02-23)
+aiohttp = "^3.7.4" # Apache Software License 2.0 (as of 2020-12-10)
+urllib3 = "^1.26.5" # MIT License (as of 2020-03-12)
 
 [tool.poetry.dev-dependencies]
-pytest = "^5.2"                 # MIT License (as of 2020-09-29)
-sphinx = "^3.2.1"
-sphinx-autodoc-typehints = "^1.11.1"
-sphinx-rtd-theme = "^0.5.0"
-pytest-cov = "^2.10.1"
-codecov = "^2.1.10"
-doc8 = {version = "^0.8.1", optional = true}
-pytest-mock = "^3.3.1"
-requests-mock = "^1.8.0"
-pytest-subtests = "^0.3.2"
-pytest-repeat = "^0.8.0"
-tox = "^3.20.1"
-tox-poetry-dev-dependencies = "^0.0.5"
+codecov = "^2.1.10" 
+doc8 = {version = "^0.8.1", optional = true} 
+pytest = "^5.2" # MIT License (as of 2020-09-29)
+pytest-cov = "^2.10.1" 
+pytest-mock = "^3.3.1" 
+pytest-repeat = "^0.8.0" 
+pytest-subtests = "^0.3.2" 
+requests-mock = "^1.8.0" 
+sphinx = "^3.2.1" 
+sphinx-autodoc-typehints = "^1.11.1" 
+sphinx-rtd-theme = "^0.5.0" 
+tox = "^3.20.1" 
+tox-poetry-dev-dependencies = "^0.0.5" 
 
 [tool.poetry.scripts]
 slacktivate = "slacktivate.cli.__main__:main"
 
 [build-system]
-requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"
+requires = ["poetry>=0.12"]
