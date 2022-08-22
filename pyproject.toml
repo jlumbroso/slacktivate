@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "slacktivate"
-version = "0.2.17"
+version = "0.2.18"
 description = "Slacktivate is a Python library and Command-Line Interface to assist in the provisioning and management of a Slack workspace."
 authors = ["Jérémie Lumbroso <lumbroso@cs.princeton.edu>"]
 license = "LGPL-3.0-or-later"
@@ -47,7 +47,7 @@ slack-scim = "^1.1.0"           # MIT License (as of 2020-09-29)
 slackclient = "^2.8.0"          # MIT License (as of 2020-09-29)
 python-dotenv = "^0.14.0"       # BSD License (as of 2020-09-29)
 backoff = "^1.10.0"             # MIT License (as of 2020-09-29)
-Pillow = "^8.2.0"               # PIL Software License (as of 2020-09-29)
+Pillow = "9.0.1"               # PIL Software License (as of 2020-09-29)
 requests = "^2.24.0"            # Apache Software License (Apache 2.0) (as of 2020-09-29)
 pyyaml = "^5.3.1"               # MIT License (as of 2020-09-29)
 jinja2 = "^2.11.2"              # BSD License (as of 2020-09-29)
