@@ -5,9 +5,26 @@ name: pytest
 jobs:
   pytest:
     name: pytest
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9"]
+        poetry-version: ["1.1.15"]
+        os: ["ubuntu-latest"]
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@master
+      - name: Checking out latest version of master branch
+        uses: actions/checkout@master
+
+      - name: Install Python environment
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v2.0.0
+        with:
+          poetry-version: ${{ matrix.poetry-version }}
 
       - name: Installing jpeg-dev and other Pillow dependencies with apt-get
         shell: bash
@@ -21,25 +38,10 @@ jobs:
             libpng-dev libjpeg-dev
 
       - name: Setup Python & Poetry and install project
-        uses: abatilo/actions-poetry@v1.5.0
-        with:
-          python_version: 3.8.0
-          poetry_version: 1.0
-          working_directory: "." # optional, defaults to ".'
-          args: install
+        run: poetry install
 
       - name: Run pytest
-        uses: abatilo/actions-poetry@v1.5.0
-        with:
-          python_version: 3.8.0
-          poetry_version: 1.0
-          working_directory: "."
-          args: run python -m pytest --cov=slacktivate --cov-branch tests/
+        run: poetry run python -m pytest --cov=slacktivate --cov-branch tests/
 
       - name: Run codecov to upload report to site
-        uses: abatilo/actions-poetry@v1.5.0
-        with:
-          python_version: 3.8.0
-          poetry_version: 1.0
-          working_directory: "."
-          args: run codecov -t ${{ secrets.CODECOV_TOKEN }}
+        run: poetry run codecov -t ${{ secrets.CODECOV_TOKEN }}

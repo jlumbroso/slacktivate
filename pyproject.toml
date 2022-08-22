@@ -63,6 +63,8 @@ tqdm = "^4.49.0"                # MPL 2.0 License (as of 2020-09-29)
 # need to pine these versions to avoid critical vulnerabilities
 aiohttp = "^3.7.4"              # Apache Software License 2.0 (as of 2020-12-10)
 urllib3 = "^1.26.5"             # MIT License (as of 2020-03-12)
+markupsafe = "2.0.1"            # BSD 3.0 License (as of 2019-02-23)
+MarkupSafe = "2.0.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"                 # MIT License (as of 2020-09-29)

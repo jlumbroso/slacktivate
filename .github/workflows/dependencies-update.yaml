@@ -16,10 +16,26 @@ on:
 jobs:
   dependency-update:
     name: dependency-update
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9"]
+        poetry-version: ["1.1.15"]
+        os: ["ubuntu-latest"]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checking out latest version of master branch
         uses: actions/checkout@master
+
+      - name: Install Python environment
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v2.0.0
+        with:
+          poetry-version: ${{ matrix.poetry-version }}
 
       - name: Installing jpeg-dev and other Pillow dependencies with apt-get
         shell: bash
@@ -33,28 +49,13 @@ jobs:
             libpng-dev libjpeg-dev
 
       - name: Setup Python & Poetry and install project
-        uses: abatilo/actions-poetry@v1.5.0
-        with:
-          python_version: 3.8.0
-          poetry_version: 1.0
-          working_directory: "." # optional, defaults to ".'
-          args: install
+        run: poetry install
 
       - name: Generate requirements.txt
-        uses: abatilo/actions-poetry@v1.5.0
-        with:
-          python_version: 3.8.0
-          poetry_version: 1.0
-          working_directory: "."
-          args: export -f requirements.txt --without-hashes > requirements.txt
+        run: poetry export -f requirements.txt --without-hashes > requirements.txt
 
       - name: Generate requirements-dev.txt
-        uses: abatilo/actions-poetry@v1.5.0
-        with:
-          python_version: 3.8.0
-          poetry_version: 1.0
-          working_directory: "."
-          args: export --dev -f requirements.txt --without-hashes > requirements-dev.txt
+        run: poetry export --dev -f requirements.txt --without-hashes > requirements-dev.txt
 
       - name: Commit generated requirements.txt
         uses: EndBug/add-and-commit@v4
