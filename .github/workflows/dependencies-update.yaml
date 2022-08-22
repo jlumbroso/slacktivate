@@ -1,4 +1,3 @@
-
 # GitHub Actions workflow to generate a requirements.txt, for all the
 # automatic processing that GitHub does, from a Poetry setup file, and
 # commit the requirements.txt to the repo
@@ -11,8 +10,8 @@ name: "Update dependency file"
 on:
   push:
     paths:
-      - 'pyproject.*'
-      - 'poetry.lock'
+      - "pyproject.*"
+      - "poetry.lock"
 
 jobs:
   dependency-update:
@@ -22,12 +21,23 @@ jobs:
       - name: Checking out latest version of master branch
         uses: actions/checkout@master
 
+      - name: Installing jpeg-dev and other Pillow dependencies with apt-get
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y python3-dev python3-setuptools
+          sudo apt-get install -y libtiff5-dev libjpeg8-dev libopenjp2-7-dev zlib1g-dev \
+            libfreetype6-dev liblcms2-dev libwebp-dev tcl8.6-dev tk8.6-dev python3-tk \
+            libharfbuzz-dev libfribidi-dev libxcb1-dev
+          sudo apt-get install -y build-essential libsqlite3-dev \
+            libpng-dev libjpeg-dev
+
       - name: Setup Python & Poetry and install project
         uses: abatilo/actions-poetry@v1.5.0
         with:
           python_version: 3.8.0
           poetry_version: 1.0
-          working_directory: "."  # optional, defaults to ".'
+          working_directory: "." # optional, defaults to ".'
           args: install
 
       - name: Generate requirements.txt
