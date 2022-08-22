@@ -2,4 +2,4 @@ from slacktivate import __version__
 
 
 def test_version():
-    assert __version__ == "0.2.18"
+    assert __version__ == "0.2.19"
