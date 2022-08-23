@@ -57,8 +57,8 @@ is as follows:
 3. Install the app to your workspace (see
    `here <https://api.slack.com/start/overview#installing_distributing>`_ for
    the documentation).
-4. Use the generated token (if you are provided with multiple tokens, use the
-   "OAuth Access Token" not the "Bot User OAuth Access Token").
+4. Use the generated token in the "OAuth & Permissions" tab (if you are provided with
+   multiple tokens, use the "OAuth Access Token" not the "Bot User OAuth Access Token").
 
 Note that you can easily **reinstall your app** with different permissions if
 it turns out you did not select all the necessary permissions.

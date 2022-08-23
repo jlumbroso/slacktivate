@@ -42,6 +42,33 @@ def flatten(
     return list(gen)
 
 
+def iterable_from_list_or_dict(data: typing.Union[list, dict]) -> typing.Iterable:
+    iterable = None
+    if type(data) is list:
+        iterable = data
+    elif type(dict) is dict:
+        iterable = data.values()
+    else:
+        # heuristic by
+        # Easier to Ask for Forgiveness than Permission
+        try:
+            # assume it's a dict
+            iterable = data.values()
+        except AttributeError:
+            try:
+                # assume it's a list
+                iterable = list(data)
+            except TypeError as exc:
+                raise Exception(
+                    "unable to process data: <{}> {}".format(type(data), data),
+                ) from exc
+    
+    if iterable is None:
+        raise Exception("unable to process data: <{}> {}".format(type(data), data))
+    
+    return iterable
+
+
 def merge_dict(
         src: typing.Optional[dict] = None,
         dest: typing.Optional[dict] = None,

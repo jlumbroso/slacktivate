@@ -157,7 +157,7 @@ As explained in [the official Slack SCIM API documentation](https://api.slack.co
 1. As *a Workspace/Organization Owner*, create [a new app for your workspace](https://api.slack.com/apps?new_app=1) (see [here](https://api.slack.com/start/overview#creating) for the documentation).
 2. Add the `admin` OAuth scope to [the "User Token Scopes" section](https://api.slack.com/authentication/quickstart#configuring).
 3. Install the app to your workspace (see [here](https://api.slack.com/start/overview#installing_distributing) for the documentation).
-4. Use the generated token (if you are provided with multiple tokens, use the "OAuth Access Token" not the "Bot User OAuth Access Token").
+4. Use the generated token available in the "OAuth & Permissions" tab (if you are provided with multiple tokens, use the "OAuth Access Token" not the "Bot User OAuth Access Token").
 
 Note that you can easily *reinstall your app* with different permissions if it turns out you did not select all the necessary permissions.
 

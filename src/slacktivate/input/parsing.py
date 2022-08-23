@@ -274,7 +274,8 @@ class UserSourceConfig(SlacktivateConfigSection):
             #     "user1@domain.com": ["user1@domain.com", "user1.alias@domain.com"],
             # ... }
             # => replace emails
-            for user_row in data:
+            iterable = slacktivate.input.helpers(data)
+            for user_row in iterable:
                 # only place where EMAIL_FIELD_NAME is needed
                 email = user_row.get(EMAIL_FIELD_NAME)
                 if email is None:
@@ -307,9 +308,10 @@ class UserSourceConfig(SlacktivateConfigSection):
                 user_data=data,
                 key=key_pattern,
             )
+            iterable = slacktivate.input.helpers(data)
 
             # store the key
-            for record in data.values():
+            for record in iterable:
                 record["key"] = key_pattern
 
         # create additional programmable fields
