@@ -10,6 +10,7 @@ import click_spinner
 import jinja2
 
 import slacktivate.__version__
+import slacktivate.cli.commands.channels
 import slacktivate.cli.commands.users
 import slacktivate.cli.helpers
 import slacktivate.cli.logo
@@ -152,6 +153,17 @@ users_deactivate = cli_users.command(name="deactivate")(slacktivate.cli.commands
 users_list = cli_users.command(name="list")(slacktivate.cli.commands.users.users_list)
 #users_synchronize = cli_users.command(name="synchronize")(slacktivate.cli.commands.users.users_synchronize)
 
+@cli.group(name="channels")
+@click.pass_context
+def cli_channels(ctx):
+    """
+    Sub-command for operations on Slack channels (e.g.: list, synchronize, invite).
+    """
+    pass
+
+#channels_deactivate = cli_channels.command(name="deactivate")(slacktivate.cli.commands.channels.channels_deactivate)
+channels_list = cli_channels.command(name="list")(slacktivate.cli.commands.channels.channels_list)
+channels_ensure = cli_channels.command(name="ensure")(slacktivate.cli.commands.channels.channels_ensure)
 
 @cli.command()
 @slacktivate.cli.helpers.cli_arg_spec
