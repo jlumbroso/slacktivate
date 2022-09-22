@@ -11,6 +11,7 @@ the logged-in Slack workspace.
 import itertools
 import typing
 
+import loguru
 import slack
 import slack.errors
 import slack_scim
@@ -58,6 +59,9 @@ for more information).
 _custom_fields_by_label: typing.Optional[typing.Dict[str, dict]] = None
 
 
+logger = loguru.logger
+
+
 @slacktivate.slack.retry.slack_retry
 def user_patch(
         user: slacktivate.slack.classes.SlackUserTypes,
@@ -86,6 +90,7 @@ def user_patch(
     if user is None:
         return
 
+    result = None
     with slacktivate.slack.clients.managed_scim() as scim:
         result = scim.patch_user(
             id=user.id,
@@ -172,6 +177,7 @@ def user_create(
     #     "emails" in attributes
     # )
 
+    result = None
     with slacktivate.slack.clients.managed_scim() as scim:
         result = scim.create_user(
             user=attributes,
@@ -531,6 +537,7 @@ def user_profile_set(
     if user is None:
         return
 
+    result = None
     with slacktivate.slack.clients.managed_api() as slack_client:
         result = slack_client.users_profile_set(
             user=user.id,
@@ -571,6 +578,7 @@ def group_create(
     if grp.exists:
         return grp
 
+    result = None
     with slacktivate.slack.clients.managed_scim() as scim:
         new_grp = slack_scim.Group.from_dict({
             "displayName": display_name

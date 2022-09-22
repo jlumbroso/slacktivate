@@ -1,3 +1,7 @@
+# Ignore testing files
+input/*
+output/*
+configuration.yaml
 
 # Misc file
 slack-errors.txt
