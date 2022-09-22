@@ -58,11 +58,12 @@ jobs:
         run: poetry export --dev -f requirements.txt --without-hashes > requirements-dev.txt
 
       - name: Commit generated requirements.txt
-        uses: EndBug/add-and-commit@v4
+        uses: EndBug/add-and-commit@v9
         with:
           message: "Commit updated requirements for GH dependency graph + rtd.io"
           add: "requirements*.txt"
           cwd: "."
           force: true
+          default_author: github_actions
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -139,6 +139,35 @@ def users_activate(
 @slacktivate.cli.helpers.cli_arg_spec
 @slacktivate.cli.helpers.cli_opt_dry_run
 @click.pass_context
+def users_synchronize(
+        ctx: slacktivate.cli.helpers.AbstractSlacktivateCliContext,
+        spec: typing.Optional[io.BufferedReader],
+        dry_run: bool,
+):
+    """
+    Synchronize profile information and activation of users in SPEC.
+    """
+    _prep_ctx(ctx=ctx, spec=spec, dry_run=dry_run)
+
+    # MAIN EVENT
+    users_updated = slacktivate.macros.provision.users_update(
+        config=ctx.obj.config,
+        overwrite_image=None,
+        overwrite_name=None,
+        dry_run=ctx.obj.dry_run,
+    )
+
+    if ctx.obj.dry_run:
+        logger.info("Users to be updated: {}", users_updated)
+    else:
+        logger.info("Users updated: {}", users_updated)
+
+    click.echo("DONE!")
+    
+
+@slacktivate.cli.helpers.cli_arg_spec
+@slacktivate.cli.helpers.cli_opt_dry_run
+@click.pass_context
 def users_deactivate(
         ctx: slacktivate.cli.helpers.AbstractSlacktivateCliContext,
         spec: typing.Optional[io.BufferedReader],

@@ -92,10 +92,18 @@ def user_patch(
 
     result = None
     with slacktivate.slack.clients.managed_scim() as scim:
-        result = scim.patch_user(
-            id=user.id,
-            user=changes,
-        )
+        try:
+            result = scim.patch_user(
+                id=user.id,
+                user=changes,
+            )
+        except slack_scim.v1.errors.SCIMApiError as exc:
+            logger.error(
+                "Failed to patch user {user} with changes {changes}: {exc}",
+                user=user,
+                changes=changes,
+                exc=exc,
+            )
 
     if result is not None:
         return slacktivate.slack.classes.to_slack_user(result)

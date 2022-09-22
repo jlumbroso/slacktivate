@@ -7,6 +7,8 @@ the Slack SCIM API.
 
 import typing
 
+import loguru
+
 import slacktivate.helpers.photo
 import slacktivate.input.config
 import slacktivate.input.helpers
@@ -68,6 +70,10 @@ _users_cache_by_id: typing.Optional[typing.Dict[str, slacktivate.slack.classes.S
 currently logged-in Slack workspace, to speed up queries."""
 
 
+# Logger
+logger = loguru.logger
+
+
 def _refresh_users_cache() -> typing.NoReturn:
     """
     Refreshes the two global internal caches of users (:py:attr:`_users_cache_by_email`
@@ -77,6 +83,7 @@ def _refresh_users_cache() -> typing.NoReturn:
     global _users_cache_by_email, _users_cache_by_id
 
     result = slacktivate.slack.clients.scim().search_users(count=MAX_USER_LIMIT)
+    logger.debug("Retrieved {} users from Slack SCIM API.", len(result.resources))
 
     _users_cache_by_email = dict()
     _users_cache_by_id = dict()
@@ -87,6 +94,8 @@ def _refresh_users_cache() -> typing.NoReturn:
         user = slacktivate.slack.classes.SlackUser(resource=resource)
         if user is None or not user.exists:
             continue
+
+        logger.debug("Caching user {} ({}) active: {}...", user.email, user.id, user.active)
 
         # index by primary email
         _users_cache_by_email[user.email] = user
@@ -483,8 +492,15 @@ def users_ensure(
     # NOTE: if needed to deal with alternate emails, would be here
     active_user_emails = [
         user_email
-        for user_email in _iterate_emails()
+        for user_email, user in _iterate_email_and_user()
+        if user.active
     ]
+    existing_user_emails = [
+        user_email
+        for user_email, user in _iterate_email_and_user()
+    ]
+    logger.debug("Active user emails: {}", active_user_emails)
+    logger.debug("Existing user emails: {}", existing_user_emails)
 
     users_to_create = {}
 

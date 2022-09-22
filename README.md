@@ -4,7 +4,6 @@
  [![codecov](https://codecov.io/gh/jlumbroso/slacktivate/branch/master/graph/badge.svg?token=RCZNE245ZZ)](https://codecov.io/gh/jlumbroso/slacktivate)
  [![Documentation Status](https://readthedocs.org/projects/slacktivate/badge/?version=latest)](https://slacktivate.readthedocs.io/en/latest/?badge=latest)
  [![Downloads](https://pepy.tech/badge/slacktivate)](https://pepy.tech/project/slacktivate)
- [![Run on Repl.it](https://repl.it/badge/github/jlumbroso/slacktivate)](https://repl.it/github/jlumbroso/slacktivate)
  [![Stargazers](https://img.shields.io/github/stars/jlumbroso/slacktivate?style=social)](https://github.com/jlumbroso/slacktivate)
 
 
@@ -86,6 +85,7 @@ users:
 
 settings:
   slack_token: "<slack-token>"
+  workspace: "https://princetoncsgrad.slack.com/"
   keep_customized_photos: true
   keep_customized_name: true
   extend_group_memberships: false

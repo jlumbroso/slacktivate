@@ -151,7 +151,7 @@ def cli_users(ctx):
 users_activate = cli_users.command(name="activate")(slacktivate.cli.commands.users.users_activate)
 users_deactivate = cli_users.command(name="deactivate")(slacktivate.cli.commands.users.users_deactivate)
 users_list = cli_users.command(name="list")(slacktivate.cli.commands.users.users_list)
-#users_synchronize = cli_users.command(name="synchronize")(slacktivate.cli.commands.users.users_synchronize)
+users_synchronize = cli_users.command(name="synchronize")(slacktivate.cli.commands.users.users_synchronize)
 
 @cli.group(name="channels")
 @click.pass_context
