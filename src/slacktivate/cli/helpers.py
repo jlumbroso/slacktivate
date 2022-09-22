@@ -8,6 +8,7 @@ import typing
 import click
 import click_help_colors
 import click_spinner
+import loguru
 import slack
 import slack_scim
 
@@ -33,6 +34,9 @@ __all__ = [
 
     "cli_root",
 ]
+
+
+logger = loguru.logger
 
 
 # From: https://medium.com/centrality/building-repls-for-fun-and-profit-597ae4fcdd85
@@ -173,8 +177,11 @@ class SlacktivateCliContextObject:
         return self._slacktivate_config
 
     def login(self) -> typing.Tuple[slack.WebClient, slack_scim.SCIMClient]:
+        logger.debug("CLI: entering login() method")
+
         # 1. by default use environment variable
         slack_token = os.getenv("SLACK_TOKEN")
+        logger.debug("CLI: 1. env variable? SLACK_TOKEN={}", slack_token)
 
         # trying again with .env file lying around
         try:
@@ -186,26 +193,64 @@ class SlacktivateCliContextObject:
 
         # 2. may be overriden by .env variable
         slack_token = os.getenv("SLACK_TOKEN") if os.getenv("SLACK_TOKEN") is not None else slack_token
+        logger.debug("CLI: 2. load .env? SLACK_TOKEN={}", slack_token)
 
         # 3. may be overriden by specification.yaml setting
         if self._specification is not None:
             settings_slack_token = self._specification.get("settings", dict()).get("slack_token")
             slack_token = settings_slack_token if settings_slack_token is not None else slack_token
+            logger.debug("CLI: 3. specification.yaml? SLACK_TOKEN={}", slack_token)
 
         # 4. may be overriden by the command line arg
         slack_token = self._slack_token if self._slack_token is not None else slack_token
+        logger.debug("CLI: 4. cmd line? SLACK_TOKEN={}", slack_token)
 
+        logger.debug("CLI: concluding with SLACK_TOKEN={}", slack_token)
         self._slack_token_last_used = slack_token
 
         # Update internally
-        os.environ["SLACK_TOKEN"] = self._slack_token_last_used
+        if slack_token is not None:
+            logger.debug("CLI: exporting SLACK_TOKEN={}", slack_token)
+            os.environ["SLACK_TOKEN"] = self._slack_token_last_used
+        
         slacktivate.slack.clients.SLACK_TOKEN = self._slack_token_last_used
 
-        return slacktivate.slack.clients.login(
+        clients = slacktivate.slack.clients.login(
             token=self._slack_token_last_used,
             silent_error=False,
             update_global=True,
         )
+
+        # verify workspace
+        team_info = None
+        try:
+            team_info = clients[0].auth_test()
+        except Exception as exc:
+            logger.error("CLI: failed to login to Slack: {}", exc)
+            pass
+        
+        if team_info is not None and team_info.get("url") is not None:
+            team_url = team_info.get("url").lower().strip("/")
+            logger.info("CLI: logged in to Slack workspace: {}", team_url)
+            
+            # check against the workspace URL of the spec (for safety!)
+
+            spec_url = self._specification.get("settings", dict()).get("workspace")
+
+            if spec_url is None:
+                logger.debug("CLI: no workspace URL specified in the spec, CANNOT SAFEGUARD ACCESS")
+            else:
+                spec_url = spec_url.lower().strip("/")
+                if spec_url != team_url:
+                    logger.error("CLI: workspace URL mismatch: spec={} vs. actual={}", spec_url, team_url)
+                    raise RuntimeError("Workspace URL mismatch: spec={} vs. actual={}".format(spec_url, team_url))
+                else:
+                    logger.debug("CLI: workspace URL matches spec: spec={} vs. actual={}", spec_url, team_url)
+
+        else:
+            logger.debug("CLI: failed to login to Slack")
+
+        return clients
 
     @property
     def config(self) -> slacktivate.input.config.SlacktivateConfig:
