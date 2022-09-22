@@ -491,16 +491,16 @@ def users_ensure(
     # get emails of cached users
     # NOTE: if needed to deal with alternate emails, would be here
     active_user_emails = [
-        user_email
+        user_email.lower()
         for user_email, user in _iterate_email_and_user()
         if user.active
     ]
     existing_user_emails = [
-        user_email
+        user_email.lower()
         for user_email, user in _iterate_email_and_user()
     ]
-    logger.debug("Active user emails: {}", active_user_emails)
-    logger.debug("Existing user emails: {}", existing_user_emails)
+    logger.debug("Active user emails (count: {}): {}", len(active_user_emails), active_user_emails)
+    logger.debug("Existing user emails (count: {}): {}", len(existing_user_emails), existing_user_emails)
 
     users_to_create = {}
 
@@ -508,7 +508,12 @@ def users_ensure(
     for user_email, user_attributes in config.users.items():
 
         # user already exists
-        if user_email.lower() in active_user_emails:
+        if user_email.lower() in existing_user_emails:
+
+            # if user is not active, warn
+            if user_email.lower() not in active_user_emails:
+                logger.warning("User {} is not active, but exists: Need to use `synchronize` to reactivate", user_email)
+
             continue
 
         users_to_create[user_email] = user_attributes
