@@ -74,11 +74,16 @@ currently logged-in Slack workspace, to speed up queries."""
 logger = loguru.logger
 
 
-def _refresh_users_cache() -> typing.NoReturn:
+def _refresh_users_cache(index_by_alternate_emails=False) -> typing.NoReturn:
     """
     Refreshes the two global internal caches of users (:py:attr:`_users_cache_by_email`
     and :py:attr:`_users_cache_by_id`) that this module uses to speed up queries
     over users and avoid hitting rate-limiting quotas too frequently.
+
+    :param index_by_alternate_emails: Flag to indicate whether all the emails of
+        the users (i.e., including the alternate ones) should be indexed in the cache,
+        or only the primary email.
+    :type index_by_alternate_emails: :py:class:`bool`
     """
     global _users_cache_by_email, _users_cache_by_id
 
@@ -99,6 +104,11 @@ def _refresh_users_cache() -> typing.NoReturn:
 
         # index by primary email
         _users_cache_by_email[user.email] = user
+
+        # index by secondary emails
+        if index_by_alternate_emails:
+            for email in user.emails:
+                _users_cache_by_email[email] = user
 
         # index by id
         _users_cache_by_id[user.id] = user
@@ -507,14 +517,21 @@ def users_ensure(
     # iterate over all users in config
     for user_email, user_attributes in config.users.items():
 
+        logger.info("Considering {} with {}", user_email, user_attributes)
+
         # user already exists
         if user_email.lower() in existing_user_emails:
+            logger.info("=> {} in EXISTING users", user_email)
 
             # if user is not active, warn
             if user_email.lower() not in active_user_emails:
+                logger.info("=> {} in ACTIVE users", user_email)
                 logger.warning("User {} is not active, but exists: Need to use `synchronize` to reactivate", user_email)
 
             continue
+        
+        # user does not exist, so create
+        logger.info("=> {} does not exist and will be created", user_email)
 
         users_to_create[user_email] = user_attributes
 
@@ -540,9 +557,17 @@ def users_ensure(
             include_fields=True,
         )
 
-        new_user = slacktivate.slack.methods.user_create(
-            attributes=processed_attributes,
-        )
+        try:
+            new_user = slacktivate.slack.methods.user_create(
+                attributes=processed_attributes,
+            )
+        except slacktivate.slack.clients.SCIMApiError as exc:
+            logger.error(
+                "Failed to create user {email} with attributes {attributes}: {exc}",
+                email=email,
+                attributes=user_attributes,
+                exc=exc,
+            )
 
         users_created[user_email] = new_user
 

@@ -79,6 +79,10 @@ _slack_client: typing.Optional[slack.WebClient] = None
 _slack_scim: typing.Optional[slack_scim.SCIMClient] = None
 
 
+# shortcut to exceptions
+SCIMApiError = slack_scim.v1.errors.SCIMApiError
+
+
 # enum constants for code factor below
 _CLIENT_TYPE_API = 0
 _CLIENT_TYPE_SCIM = 1

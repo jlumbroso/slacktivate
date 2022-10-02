@@ -1,5 +1,5 @@
-import os
 import io
+import os
 import sys
 import textwrap
 import typing
@@ -20,7 +20,6 @@ import slacktivate.macros.manage
 import slacktivate.macros.provision
 import slacktivate.slack.classes
 import slacktivate.slack.methods
-
 
 try:
     import dotenv

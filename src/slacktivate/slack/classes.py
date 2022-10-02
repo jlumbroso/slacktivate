@@ -376,6 +376,12 @@ class SlackUser:
     def email(self) -> typing.Optional[str]:
         if self._user is not None:
             return self._user.emails[0].value
+    
+    @property
+    def emails(self) -> typing.List[str]:
+        if self._user is not None:
+            return list(map(lambda x: x.value, self._user.emails or []))
+        return []
 
     @property
     def fullname(self) -> typing.Optional[str]:
