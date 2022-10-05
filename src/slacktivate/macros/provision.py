@@ -563,11 +563,13 @@ def users_ensure(
             )
         except slacktivate.slack.clients.SCIMApiError as exc:
             logger.error(
-                "Failed to create user {email} with attributes {attributes}: {exc}",
-                email=email,
+                "Failed to create user {email} [{exists}] with attributes {attributes}: {exc}",
+                email=user_email,
+                exists=user_email.lower() in existing_user_emails,
                 attributes=user_attributes,
                 exc=exc,
             )
+            continue
 
         users_created[user_email] = new_user
 
